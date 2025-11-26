@@ -4,61 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BabaForum</title>
-    
-    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Markdown Parser (Marked) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
         body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); transition: all 0.2s; }
         .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4); }
         .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .btn-danger:hover { background: rgba(239, 68, 68, 0.4); color: white; }
-        
-        /* Markdown Styles */
         .prose a { color: #818cf8; text-decoration: underline; }
         .prose strong { color: white; font-weight: 700; }
         .prose code { background: #1e293b; padding: 2px 6px; rounded: 4px; font-family: monospace; color: #e2e8f0; }
-        .prose pre { background: #1e293b; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
-        .prose blockquote { border-left: 4px solid #6366f1; padding-left: 1rem; font-style: italic; color: #94a3b8; }
-        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-        
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
         // ==========================================
-        // CONFIGURATION
-        // ==========================================
-        
-        const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
+      const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
           authDomain: "babaforum-500b9.firebaseapp.com",
@@ -81,108 +56,114 @@
 
         const { useState, useEffect, useRef } = React;
 
-        // Helper: Markdown Renderer
+        // --- HELPER COMPONENTS ---
+
         function RichText({ content, className }) {
             const getMarkdownText = () => {
-                // Sanitize basic HTML to prevent XSS (Basic level)
+                if (!window.marked) return { __html: content };
                 const safeText = content.replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
-                const rawMarkup = marked.parse(safeText);
-                return { __html: rawMarkup };
+                return { __html: marked.parse(safeText) };
             };
             return <div className={`prose text-slate-300 text-sm leading-relaxed ${className}`} dangerouslySetInnerHTML={getMarkdownText()} />;
         }
 
-        // Helper: Like Button Component
         function LikeButton({ user, docId, collection, likes, likedBy }) {
             const [isLiked, setIsLiked] = useState(false);
             const [count, setCount] = useState(likes || 0);
-
-            useEffect(() => {
-                if (user && likedBy && likedBy.includes(user.uid)) {
-                    setIsLiked(true);
-                }
-            }, [user, likedBy]);
-
+            useEffect(() => { if (user && likedBy?.includes(user.uid)) setIsLiked(true); }, [user, likedBy]);
             const handleLike = async (e) => {
                 e.stopPropagation();
                 if (!user) return alert("Please sign in to vote!");
-
                 const docRef = db.collection(collection).doc(docId);
                 const newStatus = !isLiked;
-                
-                // Optimistic UI update
                 setIsLiked(newStatus);
                 setCount(prev => newStatus ? prev + 1 : prev - 1);
-
                 try {
-                    if (newStatus) {
-                        await docRef.update({
-                            likes: firebase.firestore.FieldValue.increment(1),
-                            likedBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
-                        });
-                    } else {
-                        await docRef.update({
-                            likes: firebase.firestore.FieldValue.increment(-1),
-                            likedBy: firebase.firestore.FieldValue.arrayRemove(user.uid)
-                        });
-                    }
-                } catch (error) {
-                    console.error("Like failed", error);
-                    setIsLiked(!newStatus); // Revert
-                    setCount(prev => newStatus ? prev - 1 : prev + 1);
-                }
+                    await docRef.update({
+                        likes: firebase.firestore.FieldValue.increment(newStatus ? 1 : -1),
+                        likedBy: newStatus ? firebase.firestore.FieldValue.arrayUnion(user.uid) : firebase.firestore.FieldValue.arrayRemove(user.uid)
+                    });
+                } catch (error) { setIsLiked(!newStatus); setCount(prev => newStatus ? prev - 1 : prev + 1); }
             };
-
             return (
-                <button onClick={handleLike} className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${isLiked ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:bg-slate-700'}`}>
+                <button onClick={handleLike} className={`flex items-center gap-1 px-2 py-1 rounded-md ${isLiked ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:bg-slate-700'}`}>
                     <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart`}></i>
                     <span className="text-xs font-bold">{count > 0 ? count : ''}</span>
                 </button>
             );
         }
 
+        // --- MAIN COMPONENTS ---
+
         function SetupScreen() {
             return (
                 <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-                    <div className="glass-panel p-8 rounded-2xl max-w-2xl w-full text-center fade-in">
-                        <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-400 text-3xl">
-                            <i className="fa-solid fa-wrench"></i>
-                        </div>
-                        <h1 className="text-3xl font-bold text-white mb-4">Setup Required</h1>
-                        <p className="text-slate-400 mb-8">Please edit the index.html file and add your Firebase Config keys.</p>
-                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-8 py-3 rounded-xl font-bold">Refresh Page</button>
+                    <div className="glass-panel p-8 rounded-2xl text-center fade-in">
+                        <i className="fa-solid fa-wrench text-indigo-400 text-3xl mb-4 block"></i>
+                        <h1 className="text-2xl font-bold text-white mb-2">Setup Required</h1>
+                        <p className="text-slate-400 mb-6">Please add your Firebase Keys to index.html</p>
+                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-6 py-2 rounded-lg">Refresh</button>
                     </div>
                 </div>
             );
         }
 
-        function Navbar({ user, onViewChange }) {
+        function AdminDashboard({ onClose }) {
+            const [stats, setStats] = useState({ topics: 0, replies: 0 });
+            const [loading, setLoading] = useState(true);
+            useEffect(() => {
+                const fetchStats = async () => {
+                    const t = await db.collection('topics').get();
+                    const r = await db.collection('replies').get();
+                    setStats({ topics: t.size, replies: r.size });
+                    setLoading(false);
+                };
+                fetchStats();
+            }, []);
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
+                    <div className="glass-panel p-8 rounded-2xl max-w-md w-full relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><i className="fa-solid fa-xmark text-xl"></i></button>
+                        <h2 className="text-2xl font-bold text-white mb-6"><i className="fa-solid fa-shield-halved text-indigo-500 mr-2"></i> Admin Panel</h2>
+                        {loading ? <p className="text-slate-400">Loading...</p> : (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-800 p-4 rounded-xl text-center border border-slate-700">
+                                    <div className="text-3xl font-bold text-white">{stats.topics}</div>
+                                    <div className="text-xs text-slate-400 uppercase">Topics</div>
+                                </div>
+                                <div className="bg-slate-800 p-4 rounded-xl text-center border border-slate-700">
+                                    <div className="text-3xl font-bold text-white">{stats.replies}</div>
+                                    <div className="text-xs text-slate-400 uppercase">Replies</div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function Navbar({ user, onViewChange, onOpenAdmin }) {
             const handleLogin = () => {
+                if (!auth) return alert("Config Error");
                 const provider = new firebase.auth.GoogleAuthProvider();
                 auth.signInWithPopup(provider).catch(e => alert(e.message));
             };
             const isAdmin = user && user.uid === ADMIN_UID;
-
             return (
                 <nav className="glass-panel sticky top-0 z-50 border-b border-slate-700/50">
                     <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onViewChange('home')}>
-                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
-                                <i className="fa-solid fa-comments"></i>
-                            </div>
-                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                                BabaForum
-                            </span>
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('home')}>
+                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">BabaForum</span>
                         </div>
                         <div className="flex items-center gap-4">
                             {user ? (
                                 <>
-                                    {isAdmin && <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded text-xs font-bold border border-amber-500/30"><i className="fa-solid fa-shield-halved"></i> Admin</span>}
-                                    <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full border-2 border-slate-700" />
-                                    <button onClick={() => auth.signOut()} className="p-2 text-slate-400 hover:text-white" title="Sign Out"><i className="fa-solid fa-right-from-bracket"></i></button>
+                                    {isAdmin && <button onClick={onOpenAdmin} className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-3 py-1 rounded-lg text-xs font-bold border border-amber-500/30 transition-colors"><i className="fa-solid fa-lock mr-1"></i> Admin</button>}
+                                    <img src={user.photoURL} className="w-10 h-10 rounded-full border-2 border-slate-700" />
+                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-white"><i className="fa-solid fa-right-from-bracket"></i></button>
                                 </>
                             ) : (
-                                <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2"><i className="fa-brands fa-google"></i> Sign In</button>
+                                <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium"><i className="fa-brands fa-google mr-2"></i>Sign In</button>
                             )}
                         </div>
                     </div>
@@ -193,138 +174,102 @@
         function TopicList({ user, onViewChange, setCurrentTopic }) {
             const [topics, setTopics] = useState([]);
             const [loading, setLoading] = useState(true);
+            const [search, setSearch] = useState(""); // SEARCH STATE
             const isAdmin = user && user.uid === ADMIN_UID;
 
             useEffect(() => {
-                const unsubscribe = db.collection('topics').orderBy('createdAt', 'desc')
-                    .onSnapshot(snapshot => {
-                        const fetchedTopics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        // Client-side sort: Pinned first, then Date
-                        fetchedTopics.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.createdAt - a.createdAt);
-                        setTopics(fetchedTopics);
-                        setLoading(false);
-                    });
+                const unsubscribe = db.collection('topics').orderBy('createdAt', 'desc').onSnapshot(snap => {
+                    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // Sort: Pinned first, then date
+                    list.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.createdAt - a.createdAt);
+                    setTopics(list); setLoading(false);
+                });
                 return () => unsubscribe();
             }, []);
 
-            const deleteTopic = async (e, topic) => {
-                e.stopPropagation();
-                if(!window.confirm("Delete this topic?")) return;
-                try { await db.collection('topics').doc(topic.id).delete(); } catch(err) { alert(err.message); }
-            };
+            // FILTER LOGIC
+            const filteredTopics = topics.filter(t => 
+                t.title.toLowerCase().includes(search.toLowerCase()) || 
+                t.content.toLowerCase().includes(search.toLowerCase())
+            );
 
-            const togglePin = async (e, topic) => {
-                e.stopPropagation();
-                try { await db.collection('topics').doc(topic.id).update({ isPinned: !topic.isPinned }); } catch(err) { alert(err.message); }
-            };
-
+            const deleteTopic = async (e, id) => { e.stopPropagation(); if(confirm("Delete?")) await db.collection('topics').doc(id).delete(); };
+            const togglePin = async (e, topic) => { e.stopPropagation(); await db.collection('topics').doc(topic.id).update({ isPinned: !topic.isPinned }); };
+            
             return (
-                <div className="max-w-5xl mx-auto p-4 md:p-8 fade-in">
-                    <div className="flex justify-between items-center mb-8">
+                <div className="max-w-5xl mx-auto p-4 fade-in space-y-6">
+                    {/* HEADER & SEARCH */}
+                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
                         <div>
                             <h2 className="text-3xl font-bold text-white">Discussions</h2>
-                            <p className="text-slate-400 mt-1">Use **markdown** to format your posts!</p>
+                            <p className="text-slate-400 mt-1">Join the conversation.</p>
                         </div>
-                        {user && (
-                            <button onClick={() => onViewChange('create')} className="btn-primary text-white px-6 py-3 rounded-xl font-medium shadow-lg flex items-center gap-2">
-                                <i className="fa-solid fa-plus"></i> New Topic
-                            </button>
-                        )}
+                        <div className="flex gap-3 w-full md:w-auto">
+                            {/* Search Input */}
+                            <div className="relative flex-1 md:w-64">
+                                <i className="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500"></i>
+                                <input 
+                                    type="text" 
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search topics..." 
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                                />
+                            </div>
+                            {user && <button onClick={() => onViewChange('create')} className="btn-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap"><i className="fa-solid fa-plus"></i> New</button>}
+                        </div>
                     </div>
 
-                    {loading ? <div className="text-slate-500 text-center py-10">Loading...</div> : (
-                        <div className="space-y-3">
-                            {topics.map(topic => (
-                                <div key={topic.id} onClick={() => { setCurrentTopic(topic); onViewChange('thread'); }}
-                                    className={`glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 transition-colors group flex gap-4 relative ${topic.isPinned ? 'border-l-4 border-amber-400' : ''}`}>
-                                    
-                                    <div className="flex-shrink-0 pt-1 relative">
-                                        <img src={topic.authorPhoto} className="w-10 h-10 rounded-full" alt="Author"/>
-                                        {topic.isPinned && <div className="absolute -top-2 -left-2 bg-amber-500 text-white w-5 h-5 flex items-center justify-center rounded-full text-xs shadow-lg"><i className="fa-solid fa-thumbtack"></i></div>}
-                                    </div>
-                                    
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <h3 className="text-lg font-semibold text-slate-200 group-hover:text-indigo-400 truncate pr-20">{topic.title}</h3>
-                                            <div className="flex gap-2 z-10">
-                                                {/* ADMIN PIN BUTTON */}
-                                                {isAdmin && (
-                                                    <button onClick={(e) => togglePin(e, topic)} className={`p-2 rounded-lg text-xs transition-colors ${topic.isPinned ? 'text-amber-400 bg-amber-400/10' : 'text-slate-600 hover:text-amber-400'}`} title={topic.isPinned ? "Unpin" : "Pin"}>
-                                                        <i className="fa-solid fa-thumbtack"></i>
-                                                    </button>
-                                                )}
-                                                {/* DELETE BUTTON */}
-                                                {user && (user.uid === topic.authorId || isAdmin) && (
-                                                    <button onClick={(e) => deleteTopic(e, topic)} className="btn-danger p-2 rounded-lg text-xs transition-colors">
-                                                        <i className="fa-solid fa-trash"></i>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="text-slate-400 text-sm line-clamp-2 mt-1">
-                                            <RichText content={topic.preview || ""} />
-                                        </div>
-                                        <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
-                                            <span className="text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">{topic.tag || 'General'}</span>
-                                            <span><i className="fa-regular fa-user"></i> {topic.authorName}</span>
-                                            
-                                            <div className="flex items-center gap-3 ml-auto">
-                                                {/* LIKE BUTTON */}
-                                                <LikeButton user={user} docId={topic.id} collection="topics" likes={topic.likes} likedBy={topic.likedBy} />
-                                                <span><i className="fa-regular fa-comment-dots"></i> {topic.replyCount || 0} Replies</span>
-                                            </div>
-                                        </div>
+                    {loading ? <div className="text-slate-500 text-center">Loading...</div> : 
+                        filteredTopics.length === 0 ? <div className="text-center py-10 text-slate-500">No topics found matching "{search}"</div> :
+                        filteredTopics.map(topic => (
+                        <div key={topic.id} onClick={() => {setCurrentTopic(topic); onViewChange('thread')}} className={`glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 flex gap-4 ${topic.isPinned ? 'border-l-4 border-amber-400' : ''}`}>
+                            <div className="flex-1">
+                                <div className="flex justify-between">
+                                    <h3 className="text-lg font-semibold text-slate-200">{topic.title}</h3>
+                                    <div className="flex gap-2">
+                                        {isAdmin && <button onClick={(e)=>togglePin(e,topic)} className={`text-xs p-2 rounded ${topic.isPinned ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400'}`}><i className="fa-solid fa-thumbtack"></i></button>}
+                                        {(isAdmin || user?.uid === topic.authorId) && <button onClick={(e)=>deleteTopic(e,topic.id)} className="text-slate-500 hover:text-red-400"><i className="fa-solid fa-trash"></i></button>}
                                     </div>
                                 </div>
-                            ))}
+                                <div className="text-slate-400 text-sm line-clamp-2 mt-1"><RichText content={topic.preview||""}/></div>
+                                <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+                                    <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded">{topic.tag}</span>
+                                    <span>{topic.authorName}</span>
+                                    <div className="flex items-center gap-3 ml-auto">
+                                        <LikeButton user={user} docId={topic.id} collection="topics" likes={topic.likes} likedBy={topic.likedBy} />
+                                        <span><i className="fa-regular fa-comment-dots"></i> {topic.replyCount||0}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    )}
+                    ))}
                 </div>
             );
         }
 
         function CreateTopic({ user, onViewChange }) {
-            const [title, setTitle] = useState('');
-            const [content, setContent] = useState('');
-            const [tag, setTag] = useState('General');
-            const [submitting, setSubmitting] = useState(false);
-
+            const [form, setForm] = useState({ title: '', content: '', tag: 'General' });
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                setSubmitting(true);
                 await db.collection('topics').add({
-                    title: title.trim(),
-                    content: content.trim(),
-                    preview: content.substring(0, 100) + '...',
-                    authorId: user.uid,
-                    authorName: user.displayName,
-                    authorPhoto: user.photoURL,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    replyCount: 0,
-                    tag: tag,
-                    likes: 0,
-                    likedBy: [],
-                    isPinned: false
+                    ...form, preview: form.content.substring(0, 100)+'...', authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(), replyCount: 0, likes: 0, likedBy: [], isPinned: false
                 });
-                setSubmitting(false);
                 onViewChange('home');
             };
-
             return (
-                <div className="max-w-2xl mx-auto p-4 md:p-8 fade-in">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-6 flex items-center gap-2 text-sm"><i className="fa-solid fa-arrow-left"></i> Back</button>
+                <div className="max-w-2xl mx-auto p-4 fade-in">
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4"><i className="fa-solid fa-arrow-left"></i> Back</button>
                     <div className="glass-panel p-8 rounded-2xl">
                         <h2 className="text-2xl font-bold text-white mb-6">New Topic</h2>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <input value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Title" required />
-                            <select value={tag} onChange={e => setTag(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <input className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Title" value={form.title} onChange={e=>setForm({...form, title:e.target.value})} required />
+                            <select className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}>
                                 <option>General</option><option>Help</option><option>Showcase</option><option>Ideas</option>
                             </select>
-                            <div>
-                                <textarea value={content} onChange={e => setContent(e.target.value)} className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white resize-none font-mono text-sm" placeholder="Write with **markdown** support..." required />
-                                <p className="text-slate-500 text-xs mt-2 text-right">Supports **bold**, *italic*, [links](url) and `code`</p>
-                            </div>
-                            <button type="submit" disabled={submitting} className="w-full btn-primary text-white py-3 rounded-xl font-bold">{submitting ? 'Publishing...' : 'Post'}</button>
+                            <textarea className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Markdown supported..." value={form.content} onChange={e=>setForm({...form, content:e.target.value})} required />
+                            <button type="submit" className="w-full btn-primary text-white py-3 rounded-xl font-bold">Post</button>
                         </form>
                     </div>
                 </div>
@@ -334,86 +279,54 @@
         function ThreadView({ user, topic, onViewChange }) {
             const [replies, setReplies] = useState([]);
             const [newReply, setNewReply] = useState('');
-            const bottomRef = useRef(null);
             const isAdmin = user && user.uid === ADMIN_UID;
-
+            const bottomRef = useRef(null);
             useEffect(() => {
-                if (!topic) return;
-                const unsubscribe = db.collection('replies').where('topicId', '==', topic.id).orderBy('createdAt', 'asc')
-                    .onSnapshot(snap => setReplies(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-                return () => unsubscribe();
+                if(!topic) return;
+                const unsub = db.collection('replies').where('topicId','==',topic.id).orderBy('createdAt','asc').onSnapshot(s => setReplies(s.docs.map(d=>({id:d.id, ...d.data()}))));
+                return () => unsub();
             }, [topic]);
-
             const postReply = async (e) => {
-                e.preventDefault();
-                if (!newReply.trim()) return;
+                e.preventDefault(); if(!newReply.trim()) return;
                 const batch = db.batch();
-                batch.set(db.collection('replies').doc(), {
-                    content: newReply.trim(), topicId: topic.id, authorId: user.uid,
-                    authorName: user.displayName, authorPhoto: user.photoURL,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    likes: 0, likedBy: []
-                });
+                batch.set(db.collection('replies').doc(), { content: newReply, topicId: topic.id, authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] });
                 batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(1) });
-                await batch.commit();
-                setNewReply('');
-                setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                await batch.commit(); setNewReply(''); setTimeout(() => bottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
             };
-
-            const deleteReply = async (id) => {
-                if(!window.confirm("Delete reply?")) return;
-                const batch = db.batch();
-                batch.delete(db.collection('replies').doc(id));
-                batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(-1) });
-                await batch.commit();
-            };
-
+            const deleteReply = async (id) => { if(confirm("Delete?")) { const b = db.batch(); b.delete(db.collection('replies').doc(id)); b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); await b.commit(); }};
+            
             return (
-                <div className="max-w-4xl mx-auto p-4 md:p-8 fade-in h-[calc(100vh-80px)] flex flex-col">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 hover:text-white mb-4 flex items-center gap-2 text-sm w-fit"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6">
-                        {/* Main Topic */}
+                <div className="max-w-4xl mx-auto p-4 h-screen flex flex-col fade-in">
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4 w-fit"><i className="fa-solid fa-arrow-left"></i> Back</button>
+                    <div className="flex-1 overflow-y-auto space-y-6 pr-2 pb-20">
                         <div className="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500 relative">
                             {topic.isPinned && <i className="fa-solid fa-thumbtack absolute top-4 right-4 text-amber-500 opacity-50 text-xl"></i>}
-                            <h1 className="text-2xl font-bold text-white mb-4 pr-8">{topic.title}</h1>
-                            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-slate-700/50">
-                                <img src={topic.authorPhoto} className="w-10 h-10 rounded-full" alt="OP"/>
+                            <div className="flex items-center gap-3 mb-4">
+                                <img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/>
                                 <div className="font-medium text-white">{topic.authorName}</div>
-                                <div className="ml-auto">
-                                    <LikeButton user={user} docId={topic.id} collection="topics" likes={topic.likes} likedBy={topic.likedBy} />
-                                </div>
+                                <div className="ml-auto"><LikeButton user={user} docId={topic.id} collection="topics" likes={topic.likes} likedBy={topic.likedBy}/></div>
                             </div>
+                            <h1 className="text-2xl font-bold text-white mb-4">{topic.title}</h1>
                             <RichText content={topic.content} />
                         </div>
-
-                        {/* Replies */}
-                        {replies.map((reply) => (
-                            <div key={reply.id} className="flex gap-4 fade-in group">
-                                <img src={reply.authorPhoto} className="w-8 h-8 rounded-full mt-1" alt="Replier"/>
-                                <div className="glass-panel p-4 rounded-xl rounded-tl-none flex-1 relative">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-semibold text-sm text-indigo-300">{reply.authorName}</span>
+                        {replies.map(r => (
+                            <div key={r.id} className="glass-panel p-4 rounded-xl flex gap-4">
+                                <img src={r.authorPhoto} className="w-8 h-8 rounded-full"/>
+                                <div className="flex-1">
+                                    <div className="flex justify-between mb-2">
+                                        <span className="text-indigo-300 font-medium">{r.authorName}</span>
                                         <div className="flex gap-2 items-center">
-                                            <LikeButton user={user} docId={reply.id} collection="replies" likes={reply.likes} likedBy={reply.likedBy} />
-                                            {user && (user.uid === reply.authorId || isAdmin) && (
-                                                <button onClick={() => deleteReply(reply.id)} className="text-slate-600 hover:text-red-400 p-1"><i className="fa-solid fa-trash text-xs"></i></button>
-                                            )}
+                                            <LikeButton user={user} docId={r.id} collection="replies" likes={r.likes} likedBy={r.likedBy}/>
+                                            {(isAdmin || user?.uid === r.authorId) && <button onClick={()=>deleteReply(r.id)} className="text-slate-600 hover:text-red-400"><i className="fa-solid fa-trash text-xs"></i></button>}
                                         </div>
                                     </div>
-                                    <RichText content={reply.content} />
+                                    <RichText content={r.content} />
                                 </div>
                             </div>
                         ))}
                         <div ref={bottomRef}></div>
                     </div>
-                    {user && (
-                        <div className="mt-4 pt-4 border-t border-slate-700/50 bg-[#0f172a]">
-                            <form onSubmit={postReply} className="relative">
-                                <textarea value={newReply} onChange={e => setNewReply(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-white resize-none" placeholder="Reply with markdown..." rows="2" />
-                                <button type="submit" disabled={!newReply.trim()} className="absolute right-3 bottom-3 text-indigo-400 hover:text-white disabled:opacity-50 p-2"><i className="fa-solid fa-paper-plane"></i></button>
-                            </form>
-                        </div>
-                    )}
+                    {user && <form onSubmit={postReply} className="bg-[#0f172a] pt-2 relative"><textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white" placeholder="Reply..." rows="2"/><button type="submit" className="absolute right-3 bottom-3 text-indigo-400"><i className="fa-solid fa-paper-plane"></i></button></form>}
                 </div>
             );
         }
@@ -423,6 +336,7 @@
             const [user, setUser] = useState(null);
             const [currentTopic, setCurrentTopic] = useState(null);
             const [isConfigured, setIsConfigured] = useState(false);
+            const [showAdmin, setShowAdmin] = useState(false);
 
             useEffect(() => {
                 if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
@@ -432,17 +346,16 @@
             }, []);
 
             if (!isConfigured) return <SetupScreen />;
-
             return (
                 <div className="min-h-screen pb-10">
-                    <Navbar user={user} onViewChange={setView} />
+                    <Navbar user={user} onViewChange={setView} onOpenAdmin={() => setShowAdmin(true)} />
+                    {showAdmin && <AdminDashboard onClose={() => setShowAdmin(false)} />}
                     {view === 'home' && <TopicList user={user} onViewChange={setView} setCurrentTopic={setCurrentTopic} />}
                     {view === 'create' && user && <CreateTopic user={user} onViewChange={setView} />}
                     {view === 'thread' && currentTopic && <ThreadView user={user} topic={currentTopic} onViewChange={setView} />}
                 </div>
             );
         }
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
