@@ -8,6 +8,8 @@
     <!-- Error Handler -->
     <script>
         window.onerror = function(msg, url, line) {
+            // Ignore resize errors often caused by extensions
+            if (msg.includes("ResizeObserver")) return;
             document.body.innerHTML = '<div style="color:red; padding:20px; background:black;"><h1>Error</h1><p>'+msg+'</p><p>Line: '+line+'</p></div>';
         };
     </script>
@@ -66,7 +68,8 @@
 
         const { useState, useEffect, useRef } = React;
 
-        // --- SETUP SCREEN MOVED TO TOP ---
+        // --- COMPONENTS ---
+
         function SetupScreen() {
             return (
                 <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
@@ -115,6 +118,7 @@
 
             useEffect(() => {
                 const loadProfile = async () => {
+                    if(!viewUserId) return;
                     const doc = await db.collection('users').doc(viewUserId).get();
                     if (doc.exists) {
                         const data = doc.data();
@@ -127,8 +131,26 @@
                             setIsFollowing(myData?.following?.includes(viewUserId));
                         }
                     }
-                    const postsSnap = await db.collection('topics').where('authorId', '==', viewUserId).orderBy('createdAt', 'desc').limit(20).get();
-                    setPosts(postsSnap.docs.map(d => ({id: d.id, ...d.data()})));
+                    
+                    // Load user's posts with Error Catching for Index
+                    try {
+                        const postsSnap = await db.collection('topics')
+                            .where('authorId', '==', viewUserId)
+                            .orderBy('createdAt', 'desc')
+                            .limit(20)
+                            .get();
+                        setPosts(postsSnap.docs.map(d => ({id: d.id, ...d.data()})));
+                    } catch (err) {
+                        if(err.message.includes("index")) {
+                            if(confirm("Missing Index! Click OK to create it in Firebase console.")) {
+                                // Try to parse link from error
+                                const match = err.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+                                if(match) window.open(match[0], '_blank');
+                            }
+                        } else {
+                            console.error("Post load error:", err);
+                        }
+                    }
                 };
                 if(db && viewUserId) loadProfile();
             }, [viewUserId, currentUser]);
@@ -188,7 +210,10 @@
                         </div>
                     </div>
                     <h3 className="text-xl font-bold text-white mb-4">Recent Posts</h3>
-                    <div className="space-y-3">{posts.map(post => (<div key={post.id} className="glass-panel p-4 rounded-xl"><h4 className="text-lg font-semibold text-slate-200">{post.title}</h4><div className="text-slate-500 text-xs mt-2">{new Date(post.createdAt?.seconds*1000).toLocaleDateString()}</div></div>))}</div>
+                    <div className="space-y-3">
+                        {posts.length === 0 && <div className="text-slate-500 text-sm italic">No posts yet (or index building...)</div>}
+                        {posts.map(post => (<div key={post.id} className="glass-panel p-4 rounded-xl"><h4 className="text-lg font-semibold text-slate-200">{post.title}</h4><div className="text-slate-500 text-xs mt-2">{post.createdAt ? new Date(post.createdAt.seconds*1000).toLocaleDateString() : 'Just now'}</div></div>))}
+                    </div>
                 </div>
             );
         }
@@ -253,7 +278,7 @@
             );
         }
 
-        function Navbar({ user, onViewChange, onOpenAdmin }) {
+        function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId }) {
             const handleLogin = () => {
                 if (!auth) return alert("Config Error");
                 const provider = new firebase.auth.GoogleAuthProvider();
@@ -270,7 +295,7 @@
                             {user ? (
                                 <>
                                     {isAdmin && <button onClick={onOpenAdmin} className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-3 py-1 rounded-lg text-xs font-bold border border-amber-500/30 transition-colors"><i className="fa-solid fa-lock mr-1"></i> Admin</button>}
-                                    <button onClick={() => { const p = user.uid; onViewChange('profile'); window.viewUserId = p; }} className="flex items-center gap-2 hover:bg-slate-800 px-2 py-1 rounded transition-colors">
+                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="flex items-center gap-2 hover:bg-slate-800 px-2 py-1 rounded transition-colors">
                                         <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600" /><span className="text-sm text-slate-300 hidden md:block">Me</span>
                                     </button>
                                     <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-white"><i className="fa-solid fa-right-from-bracket"></i></button>
@@ -454,17 +479,10 @@
                 }
             }, []);
 
-            const openProfile = () => { 
-                if(user) {
-                    setViewUserId(user.uid); 
-                    setView('profile'); 
-                }
-            };
-
             if (!isConfigured) return <SetupScreen />;
             return (
                 <div className="min-h-screen pb-10">
-                    <Navbar user={user} onViewChange={setView} onOpenAdmin={() => setShowAdmin(true)} />
+                    <Navbar user={user} onViewChange={setView} onOpenAdmin={() => setShowAdmin(true)} setViewUserId={setViewUserId} />
                     {showAdmin && <AdminDashboard onClose={() => setShowAdmin(false)} />}
                     {view === 'home' && <TopicList user={user} onViewChange={setView} setCurrentTopic={setCurrentTopic} setViewUserId={setViewUserId} />}
                     {view === 'create' && user && <CreateTopic user={user} onViewChange={setView} />}
