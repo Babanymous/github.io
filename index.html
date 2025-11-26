@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BabaForum</title>
+    
+    <!-- CRASH REPORTER: This will tell us why the screen is black -->
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            alert("⚠️ ERROR DETECTED:\n" + msg + "\nLine: " + line);
+            return false;
+        };
+    </script>
+
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,6 +22,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
@@ -53,13 +63,12 @@
                 auth = firebase.auth();
                 db = firebase.firestore();
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { alert("Firebase Init Error: " + e.message); }
 
         const { useState, useEffect, useRef } = React;
 
-        // Helper: Create User Profile if missing
         const ensureUserProfile = async (user) => {
-            if(!user) return;
+            if(!user || !db) return;
             const userRef = db.collection('users').doc(user.uid);
             const doc = await userRef.get();
             if (!doc.exists) {
@@ -105,11 +114,10 @@
                             setIsFollowing(myData?.following?.includes(viewUserId));
                         }
                     }
-                    // Load user's posts
                     const postsSnap = await db.collection('topics').where('authorId', '==', viewUserId).orderBy('createdAt', 'desc').limit(20).get();
                     setPosts(postsSnap.docs.map(d => ({id: d.id, ...d.data()})));
                 };
-                loadProfile();
+                if(db && viewUserId) loadProfile();
             }, [viewUserId, currentUser]);
 
             const toggleFollow = async () => {
@@ -117,7 +125,6 @@
                 const myRef = db.collection('users').doc(currentUser.uid);
                 const theirRef = db.collection('users').doc(viewUserId);
                 const batch = db.batch();
-
                 if(isFollowing) {
                     batch.update(myRef, { following: firebase.firestore.FieldValue.arrayRemove(viewUserId) });
                     batch.update(theirRef, { followers: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
@@ -132,21 +139,16 @@
 
             const saveProfile = async () => {
                 await db.collection('users').doc(currentUser.uid).update({ displayName: newName, bio: newBio });
-                // Update auth profile for future consistency
-                await currentUser.updateProfile({ displayName: newName });
                 setProfile(prev => ({ ...prev, displayName: newName, bio: newBio }));
                 setEditing(false);
             };
 
             if(!profile) return <div className="text-center p-10 text-slate-500">Loading Profile...</div>;
-
             const isMe = currentUser && currentUser.uid === viewUserId;
 
             return (
                 <div className="max-w-4xl mx-auto p-4 fade-in">
                     <button onClick={() => onViewChange('home')} className="text-slate-400 mb-6 flex items-center gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    
-                    {/* Profile Header */}
                     <div className="glass-panel p-8 rounded-2xl mb-8 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
                         <img src={profile.photoURL} className="w-24 h-24 rounded-full border-4 border-indigo-500/30 shadow-xl"/>
                         <div className="flex-1">
@@ -166,29 +168,14 @@
                                     <div className="flex gap-6 justify-center md:justify-start text-sm text-slate-400 mb-4">
                                         <span><strong className="text-white">{profile.followers?.length || 0}</strong> Followers</span>
                                         <span><strong className="text-white">{profile.following?.length || 0}</strong> Following</span>
-                                        <span><strong className="text-white">{posts.length}</strong> Posts</span>
                                     </div>
-                                    {isMe ? (
-                                        <button onClick={()=>setEditing(true)} className="btn-outline px-4 py-2 rounded-lg text-sm">Edit Profile</button>
-                                    ) : (
-                                        <button onClick={toggleFollow} className={`px-6 py-2 rounded-lg font-medium transition-all ${isFollowing ? 'bg-slate-700 text-slate-300' : 'btn-primary text-white'}`}>
-                                            {isFollowing ? 'Following' : 'Follow'}
-                                        </button>
-                                    )}
+                                    {isMe ? <button onClick={()=>setEditing(true)} className="btn-outline px-4 py-2 rounded-lg text-sm">Edit Profile</button> : <button onClick={toggleFollow} className={`px-6 py-2 rounded-lg font-medium ${isFollowing ? 'bg-slate-700 text-slate-300' : 'btn-primary text-white'}`}>{isFollowing ? 'Following' : 'Follow'}</button>}
                                 </>
                             )}
                         </div>
                     </div>
-
                     <h3 className="text-xl font-bold text-white mb-4">Recent Posts</h3>
-                    <div className="space-y-3">
-                        {posts.map(post => (
-                            <div key={post.id} onClick={() => { /* Go to thread */ }} className="glass-panel p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-slate-200">{post.title}</h4>
-                                <div className="text-slate-500 text-xs mt-2">{new Date(post.createdAt?.seconds*1000).toLocaleDateString()}</div>
-                            </div>
-                        ))}
-                    </div>
+                    <div className="space-y-3">{posts.map(post => (<div key={post.id} className="glass-panel p-4 rounded-xl"><h4 className="text-lg font-semibold text-slate-200">{post.title}</h4><div className="text-slate-500 text-xs mt-2">{new Date(post.createdAt?.seconds*1000).toLocaleDateString()}</div></div>))}</div>
                 </div>
             );
         }
@@ -197,27 +184,23 @@
             const [topics, setTopics] = useState([]);
             const [loading, setLoading] = useState(true);
             const [search, setSearch] = useState("");
-            const [filter, setFilter] = useState('all'); // 'all' or 'following'
+            const [filter, setFilter] = useState('all'); 
             const [followingList, setFollowingList] = useState([]);
 
             useEffect(() => {
-                // Load who I follow
-                if(user) {
-                    db.collection('users').doc(user.uid).get().then(doc => {
-                        if(doc.exists) setFollowingList(doc.data().following || []);
-                    });
+                if(user && db) {
+                    db.collection('users').doc(user.uid).get().then(doc => { if(doc.exists) setFollowingList(doc.data().following || []); });
                 }
-                
-                const unsubscribe = db.collection('topics').orderBy('createdAt', 'desc').onSnapshot(snap => {
-                    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    list.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.createdAt - a.createdAt);
-                    setTopics(list); 
-                    setLoading(false);
-                });
-                return () => unsubscribe();
+                if(db) {
+                    const unsubscribe = db.collection('topics').orderBy('createdAt', 'desc').onSnapshot(snap => {
+                        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        list.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.createdAt - a.createdAt);
+                        setTopics(list); setLoading(false);
+                    });
+                    return () => unsubscribe();
+                }
             }, [user]);
 
-            // Complex Filter Logic
             const displayTopics = topics.filter(t => {
                 const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || t.content.toLowerCase().includes(search.toLowerCase());
                 const matchesFilter = filter === 'all' || (filter === 'following' && followingList.includes(t.authorId));
@@ -231,39 +214,23 @@
                     <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
                         <div className="flex gap-4 items-center w-full md:w-auto">
                             <h2 className="text-3xl font-bold text-white">Feed</h2>
-                            {user && (
-                                <div className="flex bg-slate-800 rounded-lg p-1">
-                                    <button onClick={()=>setFilter('all')} className={`px-3 py-1 rounded text-sm font-medium transition-colors ${filter==='all' ? 'bg-slate-600 text-white' : 'text-slate-400'}`}>All</button>
-                                    <button onClick={()=>setFilter('following')} className={`px-3 py-1 rounded text-sm font-medium transition-colors ${filter==='following' ? 'bg-indigo-500 text-white' : 'text-slate-400'}`}>Following</button>
-                                </div>
-                            )}
+                            {user && (<div className="flex bg-slate-800 rounded-lg p-1"><button onClick={()=>setFilter('all')} className={`px-3 py-1 rounded text-sm font-medium ${filter==='all'?'bg-slate-600 text-white':'text-slate-400'}`}>All</button><button onClick={()=>setFilter('following')} className={`px-3 py-1 rounded text-sm font-medium ${filter==='following'?'bg-indigo-500 text-white':'text-slate-400'}`}>Following</button></div>)}
                         </div>
                         <div className="flex gap-3 w-full md:w-auto">
-                            <div className="relative flex-1 md:w-64">
-                                <i className="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500"></i>
-                                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-white focus:outline-none focus:border-indigo-500"/>
-                            </div>
+                            <div className="relative flex-1 md:w-64"><i className="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500"></i><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-white"/></div>
                             {user && <button onClick={() => onViewChange('create')} className="btn-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap"><i className="fa-solid fa-plus"></i> New</button>}
                         </div>
                     </div>
-
-                    {loading ? <div className="text-slate-500 text-center">Loading...</div> : 
-                        displayTopics.length === 0 ? <div className="text-center py-20 text-slate-500">No posts found. {filter === 'following' && "Follow some people!"}</div> :
+                    {loading ? <div className="text-slate-500 text-center">Loading...</div> : displayTopics.length === 0 ? <div className="text-center py-20 text-slate-500">No posts found.</div> :
                         displayTopics.map(topic => (
                         <div key={topic.id} onClick={() => {setCurrentTopic(topic); onViewChange('thread')}} className={`glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 flex gap-4 ${topic.isPinned ? 'border-l-4 border-amber-400' : ''}`}>
-                            <div onClick={(e)=>goToProfile(e, topic.authorId)} className="flex-shrink-0 pt-1 cursor-pointer hover:opacity-80" title="View Profile">
-                                <img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/>
-                            </div>
+                            <div onClick={(e)=>goToProfile(e, topic.authorId)} className="flex-shrink-0 pt-1 cursor-pointer hover:opacity-80"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/></div>
                             <div className="flex-1">
-                                <div className="flex justify-between">
-                                    <h3 className="text-lg font-semibold text-slate-200">{topic.title}</h3>
-                                    {topic.isPinned && <i className="fa-solid fa-thumbtack text-amber-400 text-xs"></i>}
-                                </div>
+                                <div className="flex justify-between"><h3 className="text-lg font-semibold text-slate-200">{topic.title}</h3>{topic.isPinned && <i className="fa-solid fa-thumbtack text-amber-400 text-xs"></i>}</div>
                                 <div className="text-slate-400 text-sm line-clamp-2 mt-1"><RichText content={topic.preview||""}/></div>
                                 <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
                                     <span onClick={(e)=>goToProfile(e, topic.authorId)} className="hover:text-indigo-400 cursor-pointer font-medium">{topic.authorName}</span>
                                     <span>{topic.tag}</span>
-                                    <span className="ml-auto"><i className="fa-regular fa-comment-dots"></i> {topic.replyCount||0}</span>
                                 </div>
                             </div>
                         </div>
@@ -272,9 +239,6 @@
             );
         }
 
-        // ... (CreateTopic and ThreadView remain mostly same, simplified for length) ...
-        // Re-including standard components for completeness
-        
         function CreateTopic({ user, onViewChange }) {
             const [form, setForm] = useState({ title: '', content: '', tag: 'General' });
             const handleSubmit = async (e) => {
@@ -308,7 +272,7 @@
             const [newReply, setNewReply] = useState('');
             const bottomRef = useRef(null);
             useEffect(() => {
-                if(!topic) return;
+                if(!topic || !db) return;
                 const unsub = db.collection('replies').where('topicId','==',topic.id).orderBy('createdAt','asc').onSnapshot(s => setReplies(s.docs.map(d=>({id:d.id, ...d.data()}))));
                 return () => unsub();
             }, [topic]);
@@ -348,10 +312,10 @@
         }
 
         function App() {
-            const [view, setView] = useState('home'); // home, create, thread, profile
+            const [view, setView] = useState('home');
             const [user, setUser] = useState(null);
             const [currentTopic, setCurrentTopic] = useState(null);
-            const [viewUserId, setViewUserId] = useState(null); // For profile view
+            const [viewUserId, setViewUserId] = useState(null);
             const [isConfigured, setIsConfigured] = useState(false);
 
             useEffect(() => {
@@ -375,17 +339,13 @@
                             <div className="flex items-center gap-4">
                                 {user ? (
                                     <>
-                                        <button onClick={() => openProfile(user.uid)} className="flex items-center gap-2 hover:bg-slate-800 px-2 py-1 rounded transition-colors">
-                                            <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600" />
-                                            <span className="text-sm text-slate-300 hidden md:block">Me</span>
-                                        </button>
+                                        <button onClick={() => openProfile(user.uid)} className="flex items-center gap-2 hover:bg-slate-800 px-2 py-1 rounded transition-colors"><img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600" /><span className="text-sm text-slate-300 hidden md:block">Me</span></button>
                                         <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-white"><i className="fa-solid fa-right-from-bracket"></i></button>
                                     </>
                                 ) : <button onClick={() => {const p = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(p)}} className="btn-primary text-white px-4 py-2 rounded-lg text-sm">Sign In</button>}
                             </div>
                         </div>
                     </nav>
-
                     {view === 'home' && <TopicList user={user} onViewChange={setView} setCurrentTopic={setCurrentTopic} setViewUserId={setViewUserId} />}
                     {view === 'create' && user && <CreateTopic user={user} onViewChange={setView} />}
                     {view === 'thread' && currentTopic && <ThreadView user={user} topic={currentTopic} onViewChange={setView} setViewUserId={setViewUserId} />}
@@ -400,4 +360,3 @@
 </html>
 
 
- 
