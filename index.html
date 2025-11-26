@@ -28,7 +28,9 @@
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); transition: all 0.2s; }
         .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4); }
-        /* Scrollbar */
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.4); color: white; }
+        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -43,9 +45,11 @@
 
     <script type="text/babel">
         // ==========================================
-
-
+        // CONFIGURATION
         // ==========================================
+
+        const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
+admin
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
           authDomain: "babaforum-500b9.firebaseapp.com",
@@ -54,10 +58,10 @@
           messagingSenderId: "428963221608",
           appId: "1:428963221608:web:e284a66da91733d2e0abdd",
           measurementId: "G-F2ZTCCXPR2"
+};
         };
         // ==========================================
 
-        // Initialize Firebase
         let app, auth, db;
         try {
             if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
@@ -65,15 +69,12 @@
                 auth = firebase.auth();
                 db = firebase.firestore();
             }
-        } catch (e) {
-            console.error("Firebase Init Error:", e);
-        }
+        } catch (e) { console.error(e); }
 
         const { useState, useEffect, useRef } = React;
 
         // --- COMPONENTS ---
 
-        // 1. Setup Screen (Shown if config is missing)
         function SetupScreen() {
             return (
                 <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
@@ -82,43 +83,75 @@
                             <i className="fa-solid fa-wrench"></i>
                         </div>
                         <h1 className="text-3xl font-bold text-white mb-4">Setup Required</h1>
-                        <p className="text-slate-400 mb-8 text-lg">
-                            This forum is ready to go, but it needs to be connected to your database.
-                        </p>
-                        <div className="text-left bg-slate-800 p-6 rounded-lg border border-slate-700 mb-8 font-mono text-sm text-slate-300">
-                            <p className="mb-2 text-green-400">// Instructions:</p>
-                            <ol className="list-decimal pl-5 space-y-2">
-                                <li>Go to <a href="https://console.firebase.google.com" target="_blank" className="text-indigo-400 underline">firebase.console.google.com</a></li>
-                                <li>Create a new project (Free)</li>
-                                <li>Enable <strong>Authentication</strong> (Google Sign-in)</li>
-                                <li>Enable <strong>Firestore Database</strong> (Test Mode)</li>
-                                <li>Copy your <code>firebaseConfig</code> from Project Settings</li>
-                                <li>Open this file (index.html) in a code editor</li>
-                                <li>Paste your config at the top (Line 42)</li>
-                            </ol>
-                        </div>
-                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-8 py-3 rounded-xl font-bold">
-                            I've Updated the Config
-                        </button>
+                        <p className="text-slate-400 mb-8">Please edit the index.html file and add your Firebase Config keys.</p>
+                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-8 py-3 rounded-xl font-bold">Refresh Page</button>
                     </div>
                 </div>
             );
         }
 
-        // 2. Navigation Bar
-        function Navbar({ user, onViewChange }) {
+        // Admin Dashboard Component
+        function AdminDashboard({ user, onClose }) {
+            const [stats, setStats] = useState({ topics: 0, replies: 0 });
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const fetchStats = async () => {
+                    const topicsSnap = await db.collection('topics').get();
+                    const repliesSnap = await db.collection('replies').get();
+                    setStats({
+                        topics: topicsSnap.size,
+                        replies: repliesSnap.size
+                    });
+                    setLoading(false);
+                };
+                fetchStats();
+            }, []);
+
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
+                    <div className="glass-panel p-8 rounded-2xl max-w-md w-full relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+                            <i className="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                            <i className="fa-solid fa-shield-halved text-indigo-500"></i> Admin Panel
+                        </h2>
+                        
+                        {loading ? <p className="text-slate-400">Loading stats...</p> : (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-800 p-4 rounded-xl text-center border border-slate-700">
+                                    <div className="text-3xl font-bold text-white mb-1">{stats.topics}</div>
+                                    <div className="text-xs text-slate-400 uppercase tracking-wider">Total Topics</div>
+                                </div>
+                                <div className="bg-slate-800 p-4 rounded-xl text-center border border-slate-700">
+                                    <div className="text-3xl font-bold text-white mb-1">{stats.replies}</div>
+                                    <div className="text-xs text-slate-400 uppercase tracking-wider">Total Replies</div>
+                                </div>
+                                <div className="col-span-2 bg-slate-800 p-4 rounded-xl border border-slate-700 mt-2">
+                                    <div className="text-sm text-slate-300">
+                                        <span className="text-indigo-400 font-bold">Storage Usage:</span> Text is tiny. You are likely using less than 0.01% of your 1GB free tier.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function Navbar({ user, onViewChange, onOpenAdmin }) {
             const handleLogin = () => {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 auth.signInWithPopup(provider).catch(e => alert(e.message));
             };
 
+            const isAdmin = user && user.uid === ADMIN_UID;
+
             return (
                 <nav className="glass-panel sticky top-0 z-50 border-b border-slate-700/50">
                     <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                        <div 
-                            className="flex items-center gap-3 cursor-pointer group" 
-                            onClick={() => onViewChange('home')}
-                        >
+                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onViewChange('home')}>
                             <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
                                 <i className="fa-solid fa-comments"></i>
                             </div>
@@ -130,30 +163,19 @@
                         <div className="flex items-center gap-4">
                             {user ? (
                                 <>
-                                    <div className="hidden md:flex flex-col items-end mr-2">
-                                        <span className="text-sm font-medium text-white">{user.displayName}</span>
-                                        <span className="text-xs text-slate-400">Member</span>
-                                    </div>
-                                    <img 
-                                        src={user.photoURL} 
-                                        alt="Profile" 
-                                        className="w-10 h-10 rounded-full border-2 border-slate-700" 
-                                    />
-                                    <button 
-                                        onClick={() => auth.signOut()}
-                                        className="p-2 text-slate-400 hover:text-white transition-colors"
-                                        title="Sign Out"
-                                    >
+                                    {isAdmin && (
+                                        <button onClick={onOpenAdmin} className="text-amber-400 hover:text-amber-300 text-sm font-bold border border-amber-500/30 px-3 py-1 rounded-lg bg-amber-500/10 transition-colors">
+                                            <i className="fa-solid fa-lock mr-1"></i> Admin
+                                        </button>
+                                    )}
+                                    <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full border-2 border-slate-700" />
+                                    <button onClick={() => auth.signOut()} className="p-2 text-slate-400 hover:text-white" title="Sign Out">
                                         <i className="fa-solid fa-right-from-bracket"></i>
                                     </button>
                                 </>
                             ) : (
-                                <button 
-                                    onClick={handleLogin}
-                                    className="btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-                                >
-                                    <i className="fa-brands fa-google"></i>
-                                    <span>Sign In</span>
+                                <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
+                                    <i className="fa-brands fa-google"></i> Sign In
                                 </button>
                             )}
                         </div>
@@ -162,91 +184,68 @@
             );
         }
 
-        // 3. Topic List View
         function TopicList({ user, onViewChange, setCurrentTopic }) {
             const [topics, setTopics] = useState([]);
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                const unsubscribe = db.collection('topics')
-                    .orderBy('createdAt', 'desc')
+                const unsubscribe = db.collection('topics').orderBy('createdAt', 'desc')
                     .onSnapshot(snapshot => {
-                        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setTopics(list);
-                        setLoading(false);
-                    }, error => {
-                        console.error("Error fetching topics:", error);
+                        setTopics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                         setLoading(false);
                     });
                 return () => unsubscribe();
             }, []);
 
-            const openTopic = (topic) => {
-                setCurrentTopic(topic);
-                onViewChange('thread');
+            const deleteTopic = async (e, topic) => {
+                e.stopPropagation();
+                if(!window.confirm("Delete this topic? This cannot be undone.")) return;
+                try {
+                    await db.collection('topics').doc(topic.id).delete();
+                } catch(err) { alert(err.message); }
             };
+
+            const isAdmin = user && user.uid === ADMIN_UID;
 
             return (
                 <div className="max-w-5xl mx-auto p-4 md:p-8 fade-in">
                     <div className="flex justify-between items-center mb-8">
                         <div>
                             <h2 className="text-3xl font-bold text-white">Discussions</h2>
-                            <p className="text-slate-400 mt-1">Join the conversation with the community.</p>
+                            <p className="text-slate-400 mt-1">Join the conversation.</p>
                         </div>
                         {user && (
-                            <button 
-                                onClick={() => onViewChange('create')}
-                                className="btn-primary text-white px-6 py-3 rounded-xl font-medium shadow-lg flex items-center gap-2"
-                            >
-                                <i className="fa-solid fa-plus"></i>
-                                New Topic
+                            <button onClick={() => onViewChange('create')} className="btn-primary text-white px-6 py-3 rounded-xl font-medium shadow-lg flex items-center gap-2">
+                                <i className="fa-solid fa-plus"></i> New Topic
                             </button>
                         )}
                     </div>
 
-                    {loading ? (
-                        <div className="space-y-4">
-                            {[1,2,3].map(i => (
-                                <div key={i} className="h-24 bg-slate-800/50 rounded-xl animate-pulse"></div>
-                            ))}
-                        </div>
-                    ) : topics.length === 0 ? (
-                        <div className="text-center py-20 bg-slate-800/30 rounded-2xl border border-dashed border-slate-700">
-                            <i className="fa-regular fa-comments text-4xl text-slate-600 mb-4"></i>
-                            <p className="text-slate-500">No topics yet. Be the first to start one!</p>
-                        </div>
-                    ) : (
+                    {loading ? <div className="text-slate-500 text-center py-10">Loading...</div> : (
                         <div className="space-y-3">
                             {topics.map(topic => (
-                                <div 
-                                    key={topic.id}
-                                    onClick={() => openTopic(topic)}
-                                    className="glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 transition-colors group flex gap-4"
-                                >
+                                <div key={topic.id} onClick={() => { setCurrentTopic(topic); onViewChange('thread'); }}
+                                    className="glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 transition-colors group flex gap-4 relative">
                                     <div className="flex-shrink-0 pt-1">
                                         <img src={topic.authorPhoto} className="w-10 h-10 rounded-full" alt="Author"/>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-lg font-semibold text-slate-200 group-hover:text-indigo-400 truncate">
-                                            {topic.title}
-                                        </h3>
-                                        <p className="text-slate-400 text-sm line-clamp-2 mt-1">
-                                            {topic.preview}
-                                        </p>
+                                        <div className="flex justify-between items-start">
+                                            <h3 className="text-lg font-semibold text-slate-200 group-hover:text-indigo-400 truncate pr-8">{topic.title}</h3>
+                                            
+                                            {/* DELETE BUTTON for Author or Admin */}
+                                            {user && (user.uid === topic.authorId || isAdmin) && (
+                                                <button onClick={(e) => deleteTopic(e, topic)} className="btn-danger p-2 rounded-lg text-xs z-10 transition-colors" title="Delete Topic">
+                                                    <i className="fa-solid fa-trash"></i>
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="text-slate-400 text-sm line-clamp-2 mt-1">{topic.preview}</p>
                                         <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
-                                            <span className="text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
-                                                {topic.tag || 'General'}
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <i className="fa-regular fa-user"></i> {topic.authorName}
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <i className="fa-regular fa-clock"></i> 
-                                                {topic.createdAt?.seconds ? new Date(topic.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}
-                                            </span>
-                                            <span className="flex items-center gap-1 ml-auto">
-                                                <i className="fa-regular fa-comment-dots"></i> {topic.replyCount || 0} Replies
-                                            </span>
+                                            <span className="text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">{topic.tag || 'General'}</span>
+                                            <span><i className="fa-regular fa-user"></i> {topic.authorName}</span>
+                                            <span><i className="fa-regular fa-clock"></i> {topic.createdAt?.seconds ? new Date(topic.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</span>
+                                            <span className="ml-auto"><i className="fa-regular fa-comment-dots"></i> {topic.replyCount || 0} Replies</span>
                                         </div>
                                     </div>
                                 </div>
@@ -257,7 +256,6 @@
             );
         }
 
-        // 4. Create Topic View
         function CreateTopic({ user, onViewChange }) {
             const [title, setTitle] = useState('');
             const [content, setContent] = useState('');
@@ -266,280 +264,147 @@
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                if (!title.trim() || !content.trim()) return;
-                
                 setSubmitting(true);
-                try {
-                    await db.collection('topics').add({
-                        title: title.trim(),
-                        content: content.trim(),
-                        preview: content.substring(0, 150) + (content.length > 150 ? '...' : ''),
-                        authorId: user.uid,
-                        authorName: user.displayName,
-                        authorPhoto: user.photoURL,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        replyCount: 0,
-                        tag: tag
-                    });
-                    setSubmitting(false);
-                    onViewChange('home');
-                } catch (error) {
-                    alert("Error creating topic: " + error.message);
-                    setSubmitting(false);
-                }
+                await db.collection('topics').add({
+                    title: title.trim(),
+                    content: content.trim(),
+                    preview: content.substring(0, 150) + '...',
+                    authorId: user.uid,
+                    authorName: user.displayName,
+                    authorPhoto: user.photoURL,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    replyCount: 0,
+                    tag: tag
+                });
+                setSubmitting(false);
+                onViewChange('home');
             };
 
             return (
                 <div className="max-w-2xl mx-auto p-4 md:p-8 fade-in">
-                    <button 
-                        onClick={() => onViewChange('home')}
-                        className="text-slate-400 hover:text-white mb-6 flex items-center gap-2 text-sm"
-                    >
-                        <i className="fa-solid fa-arrow-left"></i> Back to Discussions
-                    </button>
-                    
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-6 flex items-center gap-2 text-sm"><i className="fa-solid fa-arrow-left"></i> Back</button>
                     <div className="glass-panel p-8 rounded-2xl">
-                        <h2 className="text-2xl font-bold text-white mb-6">Create New Discussion</h2>
+                        <h2 className="text-2xl font-bold text-white mb-6">New Topic</h2>
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">Title</label>
-                                <input 
-                                    type="text" 
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                                    placeholder="What's on your mind?"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">Category</label>
-                                <select 
-                                    value={tag}
-                                    onChange={(e) => setTag(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
-                                >
-                                    <option>General</option>
-                                    <option>Help</option>
-                                    <option>Showcase</option>
-                                    <option>Ideas</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">Content</label>
-                                <textarea 
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors resize-none"
-                                    placeholder="Elaborate on your topic..."
-                                    required
-                                />
-                            </div>
-
-                            <button 
-                                type="submit" 
-                                disabled={submitting}
-                                className={`w-full btn-primary text-white py-3 rounded-xl font-bold ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                {submitting ? 'Publishing...' : 'Post Discussion'}
-                            </button>
+                            <input value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Title" required />
+                            <select value={tag} onChange={e => setTag(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white">
+                                <option>General</option><option>Help</option><option>Showcase</option><option>Ideas</option>
+                            </select>
+                            <textarea value={content} onChange={e => setContent(e.target.value)} className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white resize-none" placeholder="Content..." required />
+                            <button type="submit" disabled={submitting} className="w-full btn-primary text-white py-3 rounded-xl font-bold">{submitting ? 'Publishing...' : 'Post'}</button>
                         </form>
                     </div>
                 </div>
             );
         }
 
-        // 5. Thread View (Details & Replies)
         function ThreadView({ user, topic, onViewChange }) {
             const [replies, setReplies] = useState([]);
             const [newReply, setNewReply] = useState('');
-            const [sending, setSending] = useState(false);
             const bottomRef = useRef(null);
 
             useEffect(() => {
                 if (!topic) return;
-                const unsubscribe = db.collection('replies')
-                    .where('topicId', '==', topic.id)
-                    .orderBy('createdAt', 'asc')
-                    .onSnapshot(snapshot => {
-                        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setReplies(list);
-                    });
+                const unsubscribe = db.collection('replies').where('topicId', '==', topic.id).orderBy('createdAt', 'asc')
+                    .onSnapshot(snap => setReplies(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
                 return () => unsubscribe();
             }, [topic]);
 
             const postReply = async (e) => {
                 e.preventDefault();
                 if (!newReply.trim()) return;
-                
-                setSending(true);
-                try {
-                    const batch = db.batch();
-                    
-                    // Add Reply
-                    const replyRef = db.collection('replies').doc();
-                    batch.set(replyRef, {
-                        content: newReply.trim(),
-                        topicId: topic.id,
-                        authorId: user.uid,
-                        authorName: user.displayName,
-                        authorPhoto: user.photoURL,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-
-                    // Update Topic Count
-                    const topicRef = db.collection('topics').doc(topic.id);
-                    batch.update(topicRef, {
-                        replyCount: firebase.firestore.FieldValue.increment(1)
-                    });
-
-                    await batch.commit();
-                    
-                    setNewReply('');
-                    setSending(false);
-                    // Scroll to bottom
-                    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-                } catch (error) {
-                    alert("Error posting reply: " + error.message);
-                    setSending(false);
-                }
+                const batch = db.batch();
+                batch.set(db.collection('replies').doc(), {
+                    content: newReply.trim(), topicId: topic.id, authorId: user.uid,
+                    authorName: user.displayName, authorPhoto: user.photoURL,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(1) });
+                await batch.commit();
+                setNewReply('');
+                setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
             };
 
-            if (!topic) return null;
+            const deleteReply = async (id) => {
+                if(!window.confirm("Delete reply?")) return;
+                const batch = db.batch();
+                batch.delete(db.collection('replies').doc(id));
+                batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(-1) });
+                await batch.commit();
+            };
+
+            const isAdmin = user && user.uid === ADMIN_UID;
+
 
             return (
                 <div className="max-w-4xl mx-auto p-4 md:p-8 fade-in h-[calc(100vh-80px)] flex flex-col">
-                    <button 
-                        onClick={() => onViewChange('home')}
-                        className="text-slate-400 hover:text-white mb-4 flex items-center gap-2 text-sm w-fit"
-                    >
-                        <i className="fa-solid fa-arrow-left"></i> Back
-                    </button>
-
-                    {/* Main Content Area - Scrollable */}
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 hover:text-white mb-4 flex items-center gap-2 text-sm w-fit"><i className="fa-solid fa-arrow-left"></i> Back</button>
                     <div className="flex-1 overflow-y-auto pr-2 space-y-6 pb-6">
-                        {/* Original Post */}
                         <div className="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500">
                             <h1 className="text-2xl font-bold text-white mb-4">{topic.title}</h1>
                             <div className="flex items-center gap-3 mb-6 pb-6 border-b border-slate-700/50">
                                 <img src={topic.authorPhoto} className="w-10 h-10 rounded-full" alt="OP"/>
-                                <div>
-                                    <div className="font-medium text-white">{topic.authorName}</div>
-                                    <div className="text-xs text-slate-400">
-                                        {topic.createdAt?.seconds ? new Date(topic.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
-                                    </div>
-                                </div>
-                                <span className="ml-auto bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                                    {topic.tag}
-                                </span>
+                                <div className="font-medium text-white">{topic.authorName}</div>
                             </div>
-                            <div className="prose prose-invert max-w-none text-slate-300 whitespace-pre-wrap">
-                                {topic.content}
-                            </div>
+                            <div className="text-slate-300 whitespace-pre-wrap">{topic.content}</div>
                         </div>
 
-                        {/* Replies */}
                         {replies.map((reply) => (
-                            <div key={reply.id} className="flex gap-4 fade-in">
+                            <div key={reply.id} className="flex gap-4 fade-in group">
                                 <img src={reply.authorPhoto} className="w-8 h-8 rounded-full mt-1" alt="Replier"/>
-                                <div className="glass-panel p-4 rounded-xl rounded-tl-none flex-1">
+                                <div className="glass-panel p-4 rounded-xl rounded-tl-none flex-1 relative">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="font-semibold text-sm text-indigo-300">{reply.authorName}</span>
-                                        <span className="text-xs text-slate-500">
-                                            {reply.createdAt?.seconds ? new Date(reply.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
-                                        </span>
+                                        {/* DELETE BUTTON for Reply Author or Admin */}
+                                        {user && (user.uid === reply.authorId || isAdmin) && (
+                                            <button onClick={() => deleteReply(reply.id)} className="text-slate-600 hover:text-red-400 transition-colors">
+                                                <i className="fa-solid fa-trash text-xs"></i>
+                                            </button>
+                                        )}
                                     </div>
-                                    <div className="text-slate-300 text-sm whitespace-pre-wrap">
-                                        {reply.content}
-                                    </div>
+                                    <div className="text-slate-300 text-sm whitespace-pre-wrap">{reply.content}</div>
                                 </div>
                             </div>
                         ))}
                         <div ref={bottomRef}></div>
                     </div>
-
-                    {/* Reply Input */}
-                    {user ? (
+                    {user && (
                         <div className="mt-4 pt-4 border-t border-slate-700/50 bg-[#0f172a]">
                             <form onSubmit={postReply} className="relative">
-                                <textarea
-                                    value={newReply}
-                                    onChange={(e) => setNewReply(e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-white focus:outline-none focus:border-indigo-500 resize-none shadow-lg"
-                                    placeholder="Write a reply..."
-                                    rows="2"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            postReply(e);
-                                        }
-                                    }}
-                                />
-                                <button 
-                                    type="submit"
-                                    disabled={sending || !newReply.trim()}
-                                    className="absolute right-3 bottom-3 text-indigo-400 hover:text-white disabled:opacity-50 p-2"
-                                >
-                                    <i className="fa-solid fa-paper-plane"></i>
-                                </button>
+                                <textarea value={newReply} onChange={e => setNewReply(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-white resize-none" placeholder="Write a reply..." rows="2" />
+                                <button type="submit" disabled={!newReply.trim()} className="absolute right-3 bottom-3 text-indigo-400 hover:text-white disabled:opacity-50 p-2"><i className="fa-solid fa-paper-plane"></i></button>
                             </form>
-                        </div>
-                    ) : (
-                        <div className="mt-4 p-4 glass-panel rounded-xl text-center text-slate-400 text-sm">
-                            Please sign in to reply to this discussion.
                         </div>
                     )}
                 </div>
             );
         }
 
-        // --- MAIN APP ---
         function App() {
-            const [view, setView] = useState('home'); // home, create, thread
+            const [view, setView] = useState('home');
             const [user, setUser] = useState(null);
             const [currentTopic, setCurrentTopic] = useState(null);
             const [isConfigured, setIsConfigured] = useState(false);
+            const [showAdmin, setShowAdmin] = useState(false);
 
             useEffect(() => {
                 if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
                     setIsConfigured(true);
-                    const unsubscribe = auth.onAuthStateChanged(u => setUser(u));
-                    return () => unsubscribe();
+                    return auth.onAuthStateChanged(u => setUser(u));
                 }
             }, []);
 
-            if (!isConfigured) {
-                return <SetupScreen />;
-            }
+            if (!isConfigured) return <SetupScreen />;
 
             return (
                 <div className="min-h-screen pb-10">
-                    <Navbar user={user} onViewChange={setView} />
+                    <Navbar user={user} onViewChange={setView} onOpenAdmin={() => setShowAdmin(true)} />
                     
-                    {view === 'home' && (
-                        <TopicList 
-                            user={user} 
-                            onViewChange={setView} 
-                            setCurrentTopic={setCurrentTopic} 
-                        />
-                    )}
+                    {showAdmin && <AdminDashboard user={user} onClose={() => setShowAdmin(false)} />}
                     
-                    {view === 'create' && user && (
-                        <CreateTopic 
-                            user={user} 
-                            onViewChange={setView} 
-                        />
-                    )}
-
-                    {view === 'thread' && currentTopic && (
-                        <ThreadView 
-                            user={user} 
-                            topic={currentTopic} 
-                            onViewChange={setView} 
-                        />
-                    )}
+                    {view === 'home' && <TopicList user={user} onViewChange={setView} setCurrentTopic={setCurrentTopic} />}
+                    {view === 'create' && user && <CreateTopic user={user} onViewChange={setView} />}
+                    {view === 'thread' && currentTopic && <ThreadView user={user} topic={currentTopic} onViewChange={setView} />}
                 </div>
             );
         }
@@ -549,4 +414,3 @@
     </script>
 </body>
 </html>
-
