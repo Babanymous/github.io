@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BabaForum</title>
     
+    <!-- 1. NEW FONT: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script>
         window.onerror = function(msg, url, line) {
             if (msg.includes("ResizeObserver")) return;
@@ -23,32 +28,88 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); transition: all 0.2s; }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4); }
-        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .btn-outline { border: 1px solid #475569; color: #94a3b8; transition: all 0.2s; }
-        .prose a { color: #818cf8; text-decoration: underline; }
+        /* 2. ENHANCED GLOBAL STYLES */
+        body { 
+            background-color: #0f172a; 
+            /* Subtle background radial gradients for depth */
+            background-image: radial-gradient(circle at 15% 25%, rgba(99, 102, 241, 0.15), transparent 40%), 
+                              radial-gradient(circle at 85% 75%, rgba(168, 85, 247, 0.15), transparent 40%);
+            background-attachment: fixed;
+            color: #e2e8f0; 
+            font-family: 'Inter', sans-serif; /* Using new font */
+        }
+
+        /* Cleaner Glass Panels */
+        .glass-panel { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(20px); /* Stronger blur */
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        /* Hover effect for clickable panels */
+        .glass-hover:hover {
+            border-color: rgba(129, 140, 248, 0.3);
+            box-shadow: 0 8px 32px -4px rgba(99, 102, 241, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Modern Inputs */
+        .glass-input {
+            background: rgba(15, 23, 42, 0.5) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+        }
+        .glass-input:focus {
+            border-color: #818cf8 !important;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+            outline: none;
+        }
+
+        /* Punchier Buttons */
+        .btn-primary { 
+            background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%); 
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            transition: all 0.2s; 
+        }
+        .btn-primary:hover { 
+            filter: brightness(1.1); 
+            transform: translateY(-1px); 
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+        }
+        .btn-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); transition: all 0.2s;}
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.25); color: white; border-color: #ef4444;}
+        .btn-outline { border: 1px solid #475569; color: #cbd5e1; transition: all 0.2s; }
+        .btn-outline:hover { border-color: #818cf8; color: white; background: rgba(129, 140, 248, 0.1); }
+
+        /* Typography & Content */
+        .prose a { color: #a5b4fc; text-decoration: none; border-bottom: 1px dotted; }
+        .prose a:hover { color: #fff; border-bottom-style: solid; }
         .prose strong { color: white; font-weight: 700; }
-        .prose img { max-width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #334155; cursor: zoom-in; }
-        .prose code { background: #1e293b; padding: 2px 6px; rounded: 4px; font-family: monospace; color: #e2e8f0; }
-        .badge-new { background: #475569; color: #e2e8f0; }
-        .badge-member { background: #059669; color: #a7f3d0; }
-        .badge-regular { background: #2563eb; color: #bfdbfe; }
-        .badge-legend { background: linear-gradient(45deg, #f59e0b, #b45309); color: #fffbeb; border: 1px solid #fcd34d; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .prose img { max-width: 100%; border-radius: 12px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.1); cursor: zoom-in; }
+        .prose code { background: rgba(15, 23, 42, 0.8); padding: 3px 6px; border-radius: 6px; font-family: monospace; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Badges Refined */
+        .badge-base { font-weight: 600; letter-spacing: 0.025em; }
+        .badge-new { background: rgba(71, 85, 105, 0.5); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); }
+        .badge-member { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; border: 1px solid rgba(5, 150, 105, 0.4); }
+        .badge-regular { background: rgba(37, 99, 235, 0.2); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.4); }
+        .badge-legend { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(180, 83, 9, 0.2)); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.5); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1); }
+        
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 5px; border: 2px solid rgba(15, 23, 42, 0.5); }
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
         // ==========================================
-      const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
+        const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
           authDomain: "babaforum-500b9.firebaseapp.com",
@@ -73,10 +134,11 @@
 
         // --- HELPERS ---
         const getRank = (count) => {
-            if (count >= 100) return { label: "Legend", class: "badge-legend" };
-            if (count >= 50) return { label: "Regular", class: "badge-regular" };
-            if (count >= 10) return { label: "Member", class: "badge-member" };
-            return { label: "Newcomer", class: "badge-new" };
+            const base = "badge-base text-[10px] px-2.5 py-1 rounded-full uppercase";
+            if (count >= 100) return { label: "Legend", class: `${base} badge-legend` };
+            if (count >= 50) return { label: "Regular", class: `${base} badge-regular` };
+            if (count >= 10) return { label: "Member", class: `${base} badge-member` };
+            return { label: "Newcomer", class: `${base} badge-new` };
         };
 
         const compressImage = (file) => {
@@ -101,20 +163,6 @@
             });
         };
 
-        // --- COMPONENTS ---
-
-        function SetupScreen() {
-            return (
-                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-                    <div className="glass-panel p-8 rounded-2xl text-center fade-in">
-                        <h1 className="text-2xl font-bold text-white mb-2">Setup Required</h1>
-                        <p className="text-slate-400 mb-6">Please add your Firebase Keys to index.html</p>
-                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-6 py-2 rounded-lg">Refresh</button>
-                    </div>
-                </div>
-            );
-        }
-
         const ensureUserProfile = async (user) => {
             if(!user || !db) return;
             const userRef = db.collection('users').doc(user.uid);
@@ -131,15 +179,17 @@
             }
         };
 
+        // --- LIGHTBOX ---
         function Lightbox({ src, onClose }) {
             return (
-                <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 cursor-pointer" onClick={onClose}>
-                    <img src={src} className="max-w-full max-h-full rounded-lg shadow-2xl cursor-default" onClick={e => e.stopPropagation()} />
-                    <button className="absolute top-4 right-4 text-white text-3xl hover:text-red-500"><i className="fa-solid fa-xmark"></i></button>
+                <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 cursor-pointer fade-in" onClick={onClose}>
+                    <img src={src} className="max-w-full max-h-full rounded-2xl shadow-2xl cursor-default" onClick={e => e.stopPropagation()} />
+                    <button className="absolute top-6 right-6 text-white/70 hover:text-white text-4xl transition-colors"><i className="fa-solid fa-xmark"></i></button>
                 </div>
             );
         }
 
+        // --- RICH TEXT ---
         function RichText({ content }) {
             const [zoomImg, setZoomImg] = useState(null);
             const handleClick = (e) => { if (e.target.tagName === 'IMG') setZoomImg(e.target.src); };
@@ -150,12 +200,13 @@
             };
             return (
                 <>
-                    <div className="prose text-slate-300 text-sm leading-relaxed" dangerouslySetInnerHTML={getMarkdownText()} onClick={handleClick} />
+                    <div className="prose text-slate-300 text-[15px] leading-7" dangerouslySetInnerHTML={getMarkdownText()} onClick={handleClick} />
                     {zoomImg && <Lightbox src={zoomImg} onClose={() => setZoomImg(null)} />}
                 </>
             );
         }
 
+        // --- LIKE BUTTON ---
         function LikeButton({ user, docId, collection, likes, likedBy, authorId }) {
             const [isLiked, setIsLiked] = useState(false);
             const [count, setCount] = useState(likes || 0);
@@ -182,9 +233,22 @@
                 } catch (error) { setIsLiked(!newStatus); setCount(prev => newStatus ? prev - 1 : prev + 1); }
             };
             return (
-                <button onClick={handleLike} className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${isLiked ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:bg-slate-700'}`}>
-                    <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart`}></i><span className="text-xs font-bold">{count > 0 ? count : ''}</span>
+                <button onClick={handleLike} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${isLiked ? 'text-pink-400 bg-pink-500/20' : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'}`}>
+                    <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart text-sm`}></i><span className="text-xs font-bold">{count > 0 ? count : ''}</span>
                 </button>
+            );
+        }
+
+        function SetupScreen() {
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="glass-panel p-10 rounded-3xl text-center fade-in max-w-md">
+                        <div className="w-16 h-16 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl"><i className="fa-solid fa-triangle-exclamation"></i></div>
+                        <h1 className="text-3xl font-extrabold text-white mb-3">Setup Required</h1>
+                        <p className="text-slate-400 mb-8 text-lg">Please configure your Firebase keys in the HTML file to continue.</p>
+                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-8 py-3 rounded-xl font-bold tracking-wide">Refresh App</button>
+                    </div>
+                </div>
             );
         }
 
@@ -197,9 +261,9 @@
                 try { const b64 = await compressImage(file); onUpload(b64); } catch (e) { alert(e.message); } finally { setUploading(false); }
             };
             return (
-                <label className="cursor-pointer text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm">
+                <label className="cursor-pointer text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm font-medium transition-colors py-2">
                     <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
-                    {uploading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-regular fa-image"></i>}
+                    {uploading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-regular fa-image text-lg"></i>}
                     {uploading ? "Processing..." : "Add Image"}
                 </label>
             );
@@ -214,14 +278,17 @@
             }, [user]);
             const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
             return (
-                <div className="absolute top-16 right-4 w-80 glass-panel rounded-xl shadow-2xl overflow-hidden z-50 border border-slate-600">
-                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center"><h3 className="font-bold text-white text-sm">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
-                    <div className="max-h-80 overflow-y-auto">
-                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications.</div>}
+                <div className="absolute top-16 right-0 w-96 glass-panel rounded-2xl shadow-2xl overflow-hidden z-50 fade-in">
+                    <div className="p-4 bg-slate-900/50 border-b border-white/10 flex justify-between items-center"><h3 className="font-bold text-white">Notifications</h3><button onClick={onClose} className="text-slate-400 hover:text-white"><i className="fa-solid fa-xmark"></i></button></div>
+                    <div className="max-h-[400px] overflow-y-auto">
+                        {notes.length === 0 && <div className="p-8 text-center text-slate-500">No new notifications.</div>}
                         {notes.map(n => (
-                            <div key={n.id} onClick={() => markRead(n.id)} className={`p-3 border-b border-slate-700/50 text-sm cursor-pointer hover:bg-slate-700 ${n.read ? 'opacity-50' : 'bg-indigo-500/10'}`}>
-                                <div className="font-bold text-indigo-300">{n.fromName}</div>
-                                <div className="text-slate-300">{n.message}</div>
+                            <div key={n.id} onClick={() => markRead(n.id)} className={`p-4 border-b border-white/5 cursor-pointer transition-colors flex gap-3 items-start ${n.read ? 'hover:bg-slate-800/50 opacity-70' : 'bg-indigo-500/10 hover:bg-indigo-500/20'}`}>
+                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0"><i className="fa-solid fa-bell"></i></div>
+                                <div>
+                                    <p className="text-slate-200 text-sm"><span className="font-bold text-indigo-300">{n.fromName}</span> {n.message}</p>
+                                    <div className="text-xs text-slate-500 mt-1.5">{n.createdAt ? new Date(n.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now'}</div>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -240,24 +307,27 @@
             }, [user]);
             const handleLogin = () => { if (!auth) return alert("Config Error"); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); };
             return (
-                <nav className="glass-panel sticky top-0 z-50 border-b border-slate-700/50">
-                    <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('home')}><span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">BabaForum</span></div>
-                        <div className="flex items-center gap-4">
+                <nav className="glass-panel sticky top-0 z-50 border-b-0 shadow-sm backdrop-blur-xl">
+                    <div className="max-w-5xl mx-auto px-4 h-20 flex items-center justify-between">
+                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onViewChange('home')}>
+                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-105 transition-transform"><i className="fa-solid fa-comments"></i></div>
+                            <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tight">BabaForum</span>
+                        </div>
+                        <div className="flex items-center gap-5">
                             {user ? (
                                 <>
-                                    {isAdmin && <button onClick={onOpenAdmin} className="text-amber-400"><i className="fa-solid fa-lock"></i></button>}
+                                    {isAdmin && <button onClick={onOpenAdmin} className="text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 p-2 rounded-lg"><i className="fa-solid fa-shield-halved"></i></button>}
                                     <div className="relative">
-                                        <button onClick={() => setShowNotes(!showNotes)} className="text-slate-400 hover:text-white relative p-2">
-                                            <i className="fa-regular fa-bell text-lg"></i>
-                                            {unreadCount > 0 && <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{unreadCount}</span>}
+                                        <button onClick={() => setShowNotes(!showNotes)} className="text-slate-400 hover:text-white relative p-2 transition-colors">
+                                            <i className="fa-regular fa-bell text-xl"></i>
+                                            {unreadCount > 0 && <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-900">{unreadCount}</span>}
                                         </button>
                                         {showNotes && <Notifications user={user} onClose={() => setShowNotes(false)} />}
                                     </div>
-                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-8 h-8 rounded-full overflow-hidden border border-slate-600"><img src={user.photoURL} /></button>
-                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-white"><i className="fa-solid fa-right-from-bracket"></i></button>
+                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-700/50 hover:border-indigo-500 transition-all ring-2 ring-transparent hover:ring-indigo-500/30 shadow-md"><img src={user.photoURL} className="w-full h-full object-cover"/></button>
+                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-red-400 p-2 transition-colors"><i className="fa-solid fa-right-from-bracket text-lg"></i></button>
                                 </>
-                            ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium text-sm">Sign In</button>}
+                            ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg">Sign In with Google</button>}
                         </div>
                     </div>
                 </nav>
@@ -311,19 +381,20 @@
                 setCleaning(false);
             };
             return (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
-                    <div className="glass-panel p-8 rounded-2xl max-w-md w-full relative">
-                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><i className="fa-solid fa-xmark text-xl"></i></button>
-                        <h2 className="text-2xl font-bold text-white mb-6">Admin Panel</h2>
-                        {loading ? <p className="text-slate-400">Loading...</p> : (
-                            <div className="space-y-6">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 fade-in">
+                    <div className="glass-panel p-8 rounded-3xl max-w-md w-full relative shadow-2xl">
+                        <button onClick={onClose} className="absolute top-5 right-5 text-slate-400 hover:text-white bg-slate-800/50 p-2 rounded-full"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        <h2 className="text-2xl font-bold text-white mb-8 flex items-center"><i className="fa-solid fa-shield-halved text-amber-400 mr-3"></i> Admin Panel</h2>
+                        {loading ? <div className="text-center py-10"><i className="fa-solid fa-spinner fa-spin text-3xl text-indigo-400"></i></div> : (
+                            <div className="space-y-8">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-800 p-4 rounded-xl text-center"><div className="text-3xl font-bold text-white">{stats.topics}</div><div className="text-xs text-slate-400">Topics</div></div>
-                                    <div className="bg-slate-800 p-4 rounded-xl text-center"><div className="text-3xl font-bold text-white">{stats.replies}</div><div className="text-xs text-slate-400">Replies</div></div>
+                                    <div className="bg-slate-900/50 p-6 rounded-2xl text-center border border-white/5"><div className="text-4xl font-extrabold text-white mb-1">{stats.topics}</div><div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Topics</div></div>
+                                    <div className="bg-slate-900/50 p-6 rounded-2xl text-center border border-white/5"><div className="text-4xl font-extrabold text-white mb-1">{stats.replies}</div><div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Replies</div></div>
                                 </div>
-                                <div className="border-t border-slate-700 pt-6 space-y-3">
-                                    <button onClick={cleanOrphans} disabled={cleaning} className="w-full btn-primary py-2 rounded-lg text-sm">{cleaning?'...':'Clean Ghost Replies'}</button>
-                                    <button onClick={runCleanup} disabled={cleaning} className="w-full btn-danger py-2 rounded-lg text-sm">{cleaning?'...':'Prune Old Topics'}</button>
+                                <div className="border-t border-white/10 pt-8 space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Database Maintenance</h3>
+                                    <button onClick={cleanOrphans} disabled={cleaning} className="w-full btn-primary py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg">{cleaning?<i className="fa-solid fa-spinner fa-spin"></i>:<i className="fa-solid fa-ghost"></i>} Clean Ghost Replies</button>
+                                    <button onClick={runCleanup} disabled={cleaning} className="w-full btn-danger py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2">{cleaning?<i className="fa-solid fa-spinner fa-spin"></i>:<i className="fa-solid fa-calendar-xmark"></i>} Prune Old Topics (>1 Year)</button>
                                 </div>
                             </div>
                         )}
@@ -363,43 +434,46 @@
             const togglePin = async (e, topic) => { e.stopPropagation(); await db.collection('topics').doc(topic.id).update({ isPinned: !topic.isPinned }); };
 
             return (
-                <div className="max-w-5xl mx-auto p-4 fade-in space-y-6">
-                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-                        <div className="flex gap-4 items-center w-full md:w-auto">
-                            <h2 className="text-3xl font-bold text-white">Feed</h2>
-                            {user && (<div className="flex bg-slate-800 rounded-lg p-1"><button onClick={()=>setFilter('all')} className={`px-3 py-1 rounded text-sm font-medium ${filter==='all'?'bg-slate-600 text-white':'text-slate-400'}`}>All</button><button onClick={()=>setFilter('following')} className={`px-3 py-1 rounded text-sm font-medium ${filter==='following'?'bg-indigo-500 text-white':'text-slate-400'}`}>Following</button></div>)}
+                <div className="max-w-4xl mx-auto p-6 fade-in space-y-8">
+                    <div className="flex flex-col md:flex-row gap-6 justify-between items-center pb-4">
+                        <div className="flex gap-6 items-center w-full md:w-auto">
+                            <h2 className="text-3xl font-extrabold text-white tracking-tight">Community Feed</h2>
+                            {user && (<div className="flex bg-slate-900/50 rounded-xl p-1.5 border border-white/10"><button onClick={()=>setFilter('all')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filter==='all'?'bg-indigo-500 text-white shadow-md':'text-slate-400 hover:text-white'}`}>All</button><button onClick={()=>setFilter('following')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filter==='following'?'bg-indigo-500 text-white shadow-md':'text-slate-400 hover:text-white'}`}>Following</button></div>)}
                         </div>
-                        <div className="flex gap-3 w-full md:w-auto">
-                            <div className="relative flex-1 md:w-64"><i className="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500"></i><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-white"/></div>
-                            {user && <button onClick={() => onViewChange('create')} className="btn-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap"><i className="fa-solid fa-plus"></i> New</button>}
+                        <div className="flex gap-4 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-72"><i className="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-500"></i><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search topics..." className="w-full glass-input rounded-xl pl-12 pr-4 py-3 text-white placeholder-slate-500"/></div>
+                            {user && <button onClick={() => onViewChange('create')} className="btn-primary text-white px-6 py-3 rounded-xl flex items-center gap-3 whitespace-nowrap font-bold shadow-lg"><i className="fa-solid fa-plus"></i> New Topic</button>}
                         </div>
                     </div>
-                    {loading ? <div className="text-slate-500 text-center">Loading...</div> : displayTopics.map(topic => (
-                        <div key={topic.id} onClick={() => {setCurrentTopic(topic); onViewChange('thread')}} className={`glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 flex gap-4 ${topic.isPinned ? 'border-l-4 border-amber-400' : ''}`}>
-                            <div onClick={(e)=>goToProfile(e, topic.authorId)} className="flex-shrink-0 pt-1 cursor-pointer hover:opacity-80"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/></div>
+                    {loading ? <div className="text-center py-20"><i className="fa-solid fa-spinner fa-spin text-4xl text-indigo-500"></i></div> : displayTopics.map(topic => (
+                        <div key={topic.id} onClick={() => {setCurrentTopic(topic); onViewChange('thread')}} className={`glass-panel glass-hover p-6 rounded-3xl cursor-pointer flex gap-5 ${topic.isPinned ? 'border-l-[6px] border-amber-400 pl-5' : ''}`}>
+                            <div onClick={(e)=>goToProfile(e, topic.authorId)} className="flex-shrink-0 hover:scale-105 transition-transform"><img src={topic.authorPhoto} className="w-12 h-12 rounded-full border-2 border-slate-700/50 shadow-sm"/></div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-lg font-semibold text-slate-200 truncate">{topic.title}</h3>
-                                        {topic.isPinned && <i className="fa-solid fa-thumbtack text-amber-400 text-xs"></i>}
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="flex items-center gap-3">
+                                        {topic.isPinned && <i className="fa-solid fa-thumbtack text-amber-400 text-sm"></i>}
+                                        <h3 className="text-xl font-bold text-white truncate leading-tight group-hover:text-indigo-300 transition-colors">{topic.title}</h3>
                                     </div>
-                                    <div className="flex gap-2">
-                                        {isAdmin && <button onClick={(e)=>togglePin(e,topic)} className={`text-xs p-2 rounded ${topic.isPinned ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400'}`}><i className="fa-solid fa-thumbtack"></i></button>}
-                                        {(isAdmin || user?.uid === topic.authorId) && <button onClick={(e)=>deleteTopic(e,topic)} className="text-slate-500 hover:text-red-400"><i className="fa-solid fa-trash"></i></button>}
+                                    <div className="flex gap-2 pl-4">
+                                        {isAdmin && <button onClick={(e)=>togglePin(e,topic)} className={`text-sm p-2 rounded-lg transition-colors ${topic.isPinned ? 'text-amber-400 bg-amber-400/10' : 'text-slate-500 hover:text-amber-400 hover:bg-slate-800'}`}><i className="fa-solid fa-thumbtack"></i></button>}
+                                        {(isAdmin || user?.uid === topic.authorId) && <button onClick={(e)=>deleteTopic(e,topic)} className="text-slate-500 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition-colors"><i className="fa-solid fa-trash"></i></button>}
                                     </div>
                                 </div>
                                 {topic.topicImage && (
-                                    <div className="w-full h-48 bg-slate-900 rounded-lg my-3 overflow-hidden border border-slate-700">
-                                        <img src={topic.topicImage} className="w-full h-full object-cover" alt="Preview"/>
+                                    <div className="w-full h-56 bg-slate-900/50 rounded-2xl my-4 overflow-hidden border border-white/5 shadow-sm">
+                                        <img src={topic.topicImage} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" alt="Preview"/>
                                     </div>
                                 )}
-                                <div className="text-slate-400 text-sm line-clamp-2 mt-1"><RichText content={topic.preview||""}/></div>
-                                <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-                                    <span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{topic.authorRank || 'Member'}</span>
-                                    <span onClick={(e)=>goToProfile(e, topic.authorId)} className="hover:text-indigo-400 cursor-pointer font-medium">{topic.authorName}</span>
-                                    <div className="flex items-center gap-3 ml-auto">
+                                <div className="text-slate-300 text-[15px] line-clamp-2 leading-relaxed"><RichText content={topic.preview||""}/></div>
+                                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5 text-sm text-slate-400">
+                                    <div className="flex items-center gap-2">
+                                        <span onClick={(e)=>goToProfile(e, topic.authorId)} className="hover:text-indigo-300 cursor-pointer font-semibold text-white">{topic.authorName}</span>
+                                        <span className={topic.authorRank.class}>{topic.authorRank.label}</span>
+                                    </div>
+                                    <div className="flex items-center gap-4 ml-auto">
                                         <LikeButton user={user} docId={topic.id} collection="topics" likes={topic.likes} likedBy={topic.likedBy} authorId={topic.authorId} />
-                                        <span><i className="fa-regular fa-comment-dots"></i> {topic.replyCount||0}</span>
+                                        <span className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/50 rounded-full"><i className="fa-regular fa-comment-dots text-sm"></i> <span className="text-xs font-bold">{topic.replyCount||0}</span></span>
+                                        <span className="text-xs font-medium">{topic.createdAt ? new Date(topic.createdAt.seconds*1000).toLocaleDateString() : 'Now'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -419,9 +493,8 @@
                 const imgMatch = form.content.match(/!\[Image\]\((.*?)\)/);
                 const topicImage = imgMatch ? imgMatch[1] : null;
                 const cleanContent = form.content.replace(/!\[Image\]\(.*?\)/g, '[Image] ');
-                const previewText = cleanContent.substring(0, 100) + '...';
+                const previewText = cleanContent.substring(0, 120) + '...';
 
-                // FETCH REAL NAME FROM DB
                 const userRef = db.collection('users').doc(user.uid);
                 const userDoc = await userRef.get();
                 const userData = userDoc.data();
@@ -433,7 +506,7 @@
                     ...form, 
                     preview: previewText, 
                     topicImage: topicImage, 
-                    authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: getRank(currentCount).label,
+                    authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: getRank(currentCount),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(), replyCount: 0, likes: 0, likedBy: [], isPinned: false
                 });
                 setSubmitting(false);
@@ -441,15 +514,25 @@
             };
             const handleImageInsert = (url) => setForm(prev => ({ ...prev, content: prev.content + `\n![Image](${url})\n` }));
             return (
-                <div className="max-w-2xl mx-auto p-4 fade-in">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="glass-panel p-8 rounded-2xl">
-                        <h2 className="text-2xl font-bold text-white mb-6">New Topic</h2>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <input className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Title" value={form.title} onChange={e=>setForm({...form, title:e.target.value})} required />
-                            <select className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}><option>General</option><option>Help</option><option>Showcase</option><option>Ideas</option></select>
-                            <div><textarea className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white mb-2" placeholder="Write something..." value={form.content} onChange={e=>setForm({...form, content:e.target.value})} required /><ImageUpload onUpload={handleImageInsert} /></div>
-                            <button type="submit" disabled={submitting} className="w-full btn-primary text-white py-3 rounded-xl font-bold">{submitting ? "Publishing..." : "Post"}</button>
+                <div className="max-w-3xl mx-auto p-6 fade-in">
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 hover:text-white mb-6 flex items-center gap-2 font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back to Feed</button>
+                    <div className="glass-panel p-10 rounded-3xl shadow-xl">
+                        <h2 className="text-3xl font-extrabold text-white mb-8 tracking-tight">Create New Topic</h2>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <input className="w-full glass-input rounded-xl px-5 py-4 text-white text-lg font-bold placeholder-slate-500" placeholder="An interesting title..." value={form.title} onChange={e=>setForm({...form, title:e.target.value})} required />
+                            </div>
+                            <div className="flex gap-4">
+                                <select className="glass-input rounded-xl px-5 py-3 text-white font-medium appearance-none pr-10 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23cbd5e1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-13%205.4A17.6%2017.6%200%200%200%200%2087.2c0%205%201.8%209.3%205.4%2013l128%20128c3.6%203.6%208%205.4%2013%205.4s9.3-1.8%2013-5.4l128-128c3.6-3.6%205.4-8%205.4-13%200-5-1.8-9.3-5.4-13z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:12px] bg-[right_1rem_center]" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}><option>General</option><option>Help</option><option>Showcase</option><option>Ideas</option></select>
+                            </div>
+                            <div className="bg-slate-900/30 p-4 rounded-2xl border border-white/10">
+                                <textarea className="w-full h-64 bg-transparent border-0 text-white p-2 focus:ring-0 placeholder-slate-500 resize-none leading-relaxed" placeholder="What's on your mind? (Markdown supported)" value={form.content} onChange={e=>setForm({...form, content:e.target.value})} required />
+                                <div className="border-t border-white/10 pt-3 flex justify-between items-center">
+                                    <ImageUpload onUpload={handleImageInsert} />
+                                    <span className="text-xs text-slate-500 font-medium">Supports Markdown & Images</span>
+                                </div>
+                            </div>
+                            <button type="submit" disabled={submitting} className="w-full btn-primary text-white py-4 rounded-xl font-bold text-lg tracking-wide shadow-lg">{submitting ? <span className="flex items-center justify-center gap-2"><i className="fa-solid fa-spinner fa-spin"></i> Publishing...</span> : "Publish Topic"}</button>
                         </form>
                     </div>
                 </div>
@@ -465,20 +548,13 @@
             const postReply = async (e) => {
                 e.preventDefault(); if(!newReply.trim()) return;
                 const batch = db.batch();
-                
-                // FETCH REAL NAME
-                const userRef = db.collection('users').doc(user.uid);
-                const userDoc = await userRef.get();
-                const userData = userDoc.data();
+                const uRef = db.collection('users').doc(user.uid);
+                const uDoc = await uRef.get();
+                const userData = uDoc.data();
                 const realName = userData.displayName || user.displayName;
-                const currentCount = (userData.postCount || 0) + 1;
-                batch.update(userRef, { postCount: currentCount });
-                const rank = getRank(currentCount);
-
-                batch.set(db.collection('replies').doc(), { 
-                    content: newReply, topicId: topic.id, authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: rank.label,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] 
-                });
+                const cnt = (userData.postCount||0)+1;
+                batch.update(uRef,{postCount:cnt});
+                batch.set(db.collection('replies').doc(), { content: newReply, topicId: topic.id, authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: getRank(cnt), createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] });
                 batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(1) });
                 if(topic.authorId!==user.uid) batch.set(db.collection('notifications').doc(), { toUserId: topic.authorId, fromName: realName, message: "replied to your topic", createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false });
                 await batch.commit(); setNewReply(''); setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:'smooth'}),100);
@@ -486,20 +562,47 @@
             const handleImageInsert = (url) => setNewReply(p => p + `\n![Image](${url})\n`);
             const deleteReply = async (id) => { if(confirm("Delete?")) { const b = db.batch(); b.delete(db.collection('replies').doc(id)); b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); await b.commit(); }};
             return (
-                <div className="max-w-4xl mx-auto p-4 h-screen flex flex-col fade-in">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4 w-fit"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="flex-1 overflow-y-auto space-y-6 pr-2 pb-20">
-                        <div className="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500">
-                            <div className="flex items-center gap-3 mb-4"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/><div><div className="font-medium text-white">{topic.authorName}</div><span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{topic.authorRank}</span></div></div>
-                            <h1 className="text-2xl font-bold text-white mb-4">{topic.title}</h1>
+                <div className="max-w-4xl mx-auto p-6 h-[calc(100vh-80px)] flex flex-col fade-in">
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 hover:text-white mb-4 w-fit flex items-center gap-2 font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back to Feed</button>
+                    <div className="flex-1 overflow-y-auto space-y-6 pr-4 pb-6 custom-scrollbar">
+                        <div className="glass-panel p-8 rounded-3xl shadow-xl relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <img src={topic.authorPhoto} className="w-14 h-14 rounded-full border-2 border-indigo-500/30 shadow-sm cursor-pointer hover:ring-2 ring-indigo-500 transition-all" onClick={()=>{setViewUserId(topic.authorId);onViewChange('profile')}}/>
+                                <div>
+                                    <div className="text-lg font-bold text-white cursor-pointer hover:text-indigo-300 transition-colors" onClick={()=>{setViewUserId(topic.authorId);onViewChange('profile')}}>{topic.authorName}</div>
+                                    <span className={topic.authorRank.class}>{topic.authorRank.label}</span>
+                                </div>
+                                <div className="ml-auto text-sm text-slate-500 font-medium">{topic.createdAt ? new Date(topic.createdAt.seconds*1000).toLocaleDateString() : ''}</div>
+                            </div>
+                            <h1 className="text-3xl font-extrabold text-white mb-6 tracking-tight">{topic.title}</h1>
                             <RichText content={topic.content} />
+                            <div className="mt-8 pt-4 border-t border-white/10 flex items-center gap-4">
+                                <LikeButton user={user} docId={topic.id} collection="topics" likes={topic.likes} likedBy={topic.likedBy} authorId={topic.authorId} />
+                                <span className="text-slate-400 text-sm font-medium"><i className="fa-regular fa-comment-dots mr-2"></i> {topic.replyCount} Replies</span>
+                            </div>
                         </div>
                         {replies.map(r => (
-                            <div key={r.id} className="glass-panel p-4 rounded-xl flex gap-4"><img src={r.authorPhoto} className="w-8 h-8 rounded-full cursor-pointer" onClick={()=>{setViewUserId(r.authorId);onViewChange('profile')}}/><div className="flex-1"><div className="flex justify-between mb-2"><div className="flex items-center gap-2"><span className="text-indigo-300 font-medium">{r.authorName}</span><span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{r.authorRank}</span></div><div className="flex gap-2">{(isAdmin||user?.uid===r.authorId)&&<button onClick={()=>deleteReply(r.id)} className="text-slate-600 hover:text-red-400"><i className="fa-solid fa-trash text-xs"></i></button>}</div></div><RichText content={r.content}/></div></div>
+                            <div key={r.id} className="glass-panel p-6 rounded-2xl flex gap-5 relative group">
+                                <img src={r.authorPhoto} className="w-10 h-10 rounded-full cursor-pointer border border-slate-700 hover:border-indigo-500 transition-colors" onClick={()=>{setViewUserId(r.authorId);onViewChange('profile')}}/>
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-indigo-300 font-bold cursor-pointer hover:underline" onClick={()=>{setViewUserId(r.authorId);onViewChange('profile')}}>{r.authorName}</span>
+                                            <span className={r.authorRank.class}>{r.authorRank.label}</span>
+                                        </div>
+                                        <div className="flex gap-3 items-center">
+                                            <span className="text-xs text-slate-500 font-medium">{r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleDateString() : ''}</span>
+                                            {(isAdmin||user?.uid===r.authorId)&&<button onClick={()=>deleteReply(r.id)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><i className="fa-solid fa-trash text-sm"></i></button>}
+                                        </div>
+                                    </div>
+                                    <RichText content={r.content}/>
+                                </div>
+                            </div>
                         ))}
                         <div ref={bottomRef}></div>
                     </div>
-                    {user && <div className="bg-[#0f172a] pt-2"><div className="mb-2"><ImageUpload onUpload={handleImageInsert}/></div><form onSubmit={postReply} className="relative"><textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white" placeholder="Reply..." rows="2"/><button type="submit" className="absolute right-3 bottom-3 text-indigo-400"><i className="fa-solid fa-paper-plane"></i></button></form></div>}
+                    {user && <div className="bg-[#0f172a]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 mt-4 shadow-2xl"><div className="mb-3 px-1"><ImageUpload onUpload={handleImageInsert}/></div><form onSubmit={postReply} className="relative"><textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full glass-input rounded-2xl p-4 pr-14 text-white placeholder-slate-500 resize-none" placeholder="Write a reply..." rows="3"/><button type="submit" className="absolute right-3 bottom-3 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg transition-colors"><i className="fa-solid fa-paper-plane"></i></button></form></div>}
                 </div>
             );
         }
@@ -534,28 +637,57 @@
                 await b.commit(); setIsFollowing(!isFollowing); setProfile(p=>({...p, followers: isFollowing?p.followers.slice(0,-1):[...(p.followers||[]),currentUser.uid]}));
             };
             const save = async () => { await db.collection('users').doc(currentUser.uid).update({displayName:newName, bio:newBio}); setProfile(p=>({...p, displayName:newName, bio:newBio})); setEditing(false); };
-            if(!profile) return <div className="text-center p-10 text-slate-500">Loading...</div>;
+            if(!profile) return <div className="text-center p-20 text-slate-500"><i className="fa-solid fa-spinner fa-spin text-3xl mb-4"></i><p>Loading Profile...</p></div>;
             const isMe = currentUser && currentUser.uid === viewUserId;
             const rank = getRank(profile.postCount || 0);
             return (
-                <div className="max-w-4xl mx-auto p-4 fade-in">
-                    <button onClick={()=>onViewChange('home')} className="text-slate-400 mb-6 flex gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="glass-panel p-8 rounded-2xl mb-8 flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
-                        <img src={profile.photoURL} className="w-24 h-24 rounded-full border-4 border-indigo-500/30"/>
-                        <div className="flex-1">
+                <div className="max-w-4xl mx-auto p-6 fade-in">
+                    <button onClick={()=>onViewChange('home')} className="text-slate-400 hover:text-white mb-8 flex gap-2 items-center font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back to Feed</button>
+                    <div className="glass-panel p-10 rounded-3xl mb-10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left shadow-xl relative overflow-hidden">
+                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 z-0"></div>
+                        <img src={profile.photoURL} className="w-32 h-32 rounded-full border-4 border-white/10 shadow-2xl relative z-10"/>
+                        <div className="flex-1 relative z-10">
                             {editing ? (
-                                <div className="space-y-3"><input className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newName} onChange={e=>setNewName(e.target.value)}/><textarea className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newBio} onChange={e=>setNewBio(e.target.value)}/><button onClick={save} className="btn-primary px-4 py-1 rounded text-white text-sm">Save</button></div>
+                                <div className="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-white/10">
+                                    <h3 className="text-white font-bold mb-4">Edit Profile</h3>
+                                    <input className="w-full glass-input rounded-xl p-3 text-white font-bold" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Display Name"/>
+                                    <textarea className="w-full glass-input rounded-xl p-3 text-white resize-none" rows="3" value={newBio} onChange={e=>setNewBio(e.target.value)} placeholder="Tell us about yourself..."/>
+                                    <div className="flex gap-3 justify-end pt-2">
+                                        <button onClick={()=>setEditing(false)} className="btn-outline px-5 py-2 rounded-xl text-sm font-bold">Cancel</button>
+                                        <button onClick={save} className="btn-primary px-6 py-2 rounded-xl text-white text-sm font-bold">Save Changes</button>
+                                    </div>
+                                </div>
                             ) : (
                                 <>
-                                    <div className="flex items-center justify-center md:justify-start gap-3"><h1 className="text-3xl font-bold text-white">{profile.displayName}</h1><span className={`text-xs px-2 py-1 rounded ${rank.class}`}>{rank.label}</span></div>
-                                    <p className="text-indigo-300 mt-1 mb-4">{profile.bio}</p>
-                                    <div className="flex gap-6 justify-center md:justify-start text-sm text-slate-400 mb-4"><span><strong>{profile.followers?.length||0}</strong> Followers</span><span><strong>{profile.following?.length||0}</strong> Following</span></div>
-                                    {isMe ? <button onClick={()=>setEditing(true)} className="btn-outline px-4 py-2 rounded-lg text-sm">Edit</button> : <button onClick={toggleFollow} className={`px-6 py-2 rounded-lg font-medium ${isFollowing?'bg-slate-700 text-slate-300':'btn-primary text-white'}`}>{isFollowing?'Following':'Follow'}</button>}
+                                    <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-3 mb-2">
+                                        <h1 className="text-4xl font-extrabold text-white tracking-tight">{profile.displayName}</h1>
+                                        <span className={rank.class}>{rank.label}</span>
+                                    </div>
+                                    <p className="text-indigo-200 text-lg mb-6 leading-relaxed max-w-2xl">{profile.bio}</p>
+                                    <div className="flex gap-8 justify-center md:justify-start text-sm text-slate-400 mb-6 bg-slate-900/30 p-4 rounded-2xl inline-flex border border-white/5">
+                                        <div className="text-center"><strong className="text-white text-xl block">{profile.followers?.length||0}</strong> Followers</div>
+                                        <div className="text-center"><strong className="text-white text-xl block">{profile.following?.length||0}</strong> Following</div>
+                                        <div className="text-center"><strong className="text-white text-xl block">{profile.postCount||0}</strong> Posts</div>
+                                    </div>
+                                    <div>{isMe ? <button onClick={()=>setEditing(true)} className="btn-outline px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm">Edit Profile</button> : <button onClick={toggleFollow} className={`px-8 py-2.5 rounded-xl font-bold shadow-lg transition-all ${isFollowing?'bg-slate-700 text-slate-300 hover:bg-slate-600':'btn-primary text-white'}`}>{isFollowing?'Following':'Follow'}</button>}</div>
                                 </>
                             )}
                         </div>
                     </div>
-                    <div className="space-y-3">{posts.map(p => (<div key={p.id} className="glass-panel p-4 rounded-xl flex gap-4"><div className="w-16 h-16 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0">{p.topicImage ? <img src={p.topicImage} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-600"><i className="fa-regular fa-file-lines"></i></div>}</div><div><h4 className="text-lg font-semibold text-slate-200">{p.title}</h4><div className="text-slate-500 text-xs">{new Date(p.createdAt?.seconds*1000).toLocaleDateString()}</div></div></div>))}</div>
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><i className="fa-solid fa-clock-rotate-left text-indigo-400"></i> Recent Activity</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {posts.map(p => (
+                            <div key={p.id} className="glass-panel glass-hover p-5 rounded-2xl flex gap-4 items-center transition-all hover:scale-[1.02] cursor-pointer">
+                                <div className="w-16 h-16 bg-slate-800/50 rounded-xl overflow-hidden flex-shrink-0 border border-white/5 relative">
+                                    {p.topicImage ? <img src={p.topicImage} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-500"><i className="fa-regular fa-file-lines text-2xl"></i></div>}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-base font-bold text-slate-200 truncate mb-1">{p.title}</h4>
+                                    <div className="text-indigo-300 text-xs font-medium">{new Date(p.createdAt?.seconds*1000).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             );
         }
@@ -568,7 +700,6 @@
             const [isConfigured, setIsConfigured] = useState(false);
             const [showAdmin, setShowAdmin] = useState(false);
             useEffect(() => { if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") { setIsConfigured(true); return auth.onAuthStateChanged(async (u) => { if(u) await ensureUserProfile(u); setUser(u); }); } }, []);
-            const openProfile = () => { if(user) { setViewUserId(user.uid); setView('profile'); } };
             if (!isConfigured) return <SetupScreen />;
             return (
                 <div className="min-h-screen pb-10">
