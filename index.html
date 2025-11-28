@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BabaForum</title>
-    
     <script>window.onerror=function(m,u,l){if(m.includes("ResizeObserver"))return;document.body.innerHTML='<div style="color:red;padding:20px;background:black;"><h1>Error</h1><p>'+m+'</p><p>Line: '+l+'</p></div>'}</script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -14,7 +13,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Removed Storage SDK (Using Base64) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -23,12 +21,11 @@
         .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); transition: all 0.2s; }
         .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4); }
         .btn-danger { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .btn-danger:hover { background: rgba(239, 68, 68, 0.2); color: white; }
         .btn-outline { border: 1px solid #475569; color: #94a3b8; transition: all 0.2s; }
-        .btn-outline:hover { border-color: #e2e8f0; color: #e2e8f0; background: rgba(255,255,255,0.05); }
         .prose a { color: #818cf8; text-decoration: underline; }
         .prose strong { color: white; font-weight: 700; }
-        .prose img { max-width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #334155; }
+        .prose img { max-width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #334155; cursor: pointer; transition: transform 0.2s; }
+        .prose img:hover { transform: scale(1.01); }
         .prose code { background: #1e293b; padding: 2px 6px; rounded: 4px; font-family: monospace; color: #e2e8f0; }
         .badge-new { background: #475569; color: #e2e8f0; }
         .badge-member { background: #059669; color: #a7f3d0; }
@@ -110,7 +107,45 @@
             );
         }
 
-        // --- ADMIN PANEL WITH CLEANUP ---
+        // --- NEW: LIGHTBOX FOR ZOOMING IMAGES ---
+        function Lightbox({ src, onClose }) {
+            return (
+                <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+                    <img src={src} className="max-w-full max-h-full rounded-lg shadow-2xl" />
+                    <button className="absolute top-4 right-4 text-white text-2xl"><i className="fa-solid fa-xmark"></i></button>
+                </div>
+            );
+        }
+
+        function RichText({ content }) {
+            const [zoomImg, setZoomImg] = useState(null);
+            
+            // Handle clicks on images inside content
+            const handleClick = (e) => {
+                if (e.target.tagName === 'IMG') {
+                    setZoomImg(e.target.src);
+                }
+            };
+
+            const getMarkdownText = () => {
+                if (!window.marked) return { __html: content };
+                // Basic sanitization
+                const safeText = content.replace(/<script/gi, "&lt;script");
+                return { __html: marked.parse(safeText) };
+            };
+
+            return (
+                <>
+                    <div className="prose text-slate-300 text-sm leading-relaxed" 
+                         dangerouslySetInnerHTML={getMarkdownText()} 
+                         onClick={handleClick}
+                    />
+                    {zoomImg && <Lightbox src={zoomImg} onClose={() => setZoomImg(null)} />}
+                </>
+            );
+        }
+
+        // --- ADMIN PANEL ---
         function AdminDashboard({ onClose }) {
             const [stats, setStats] = useState({ topics: 0, replies: 0 });
             const [loading, setLoading] = useState(true);
@@ -126,61 +161,43 @@
                 fetchStats();
             }, []);
 
-            const runCleanup = async () => {
-                if(!confirm("Are you sure? This deletes posts older than 365 days.")) return;
+            const cleanOrphans = async () => {
+                if(!confirm("Clean ghost replies?")) return;
                 setCleaning(true);
                 try {
-                    const oneYearAgo = new Date();
-                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                    const snapshot = await db.collection('topics').where('createdAt', '<', oneYearAgo).limit(50).get();
-                    
+                    const topicsSnap = await db.collection('topics').get();
+                    const topicIds = new Set(topicsSnap.docs.map(d => d.id));
+                    const repliesSnap = await db.collection('replies').get();
                     const batch = db.batch();
-                    // Delete old topics AND their replies
-                    for (const doc of snapshot.docs) {
-                        batch.delete(doc.ref);
-                        const replies = await db.collection('replies').where('topicId', '==', doc.id).get();
-                        replies.forEach(r => batch.delete(r.ref));
-                    }
-                    await batch.commit();
-                    alert(`Deleted ${snapshot.size} old topics and their replies.`);
-                    // Refresh stats
-                    const t = await db.collection('topics').get();
-                    const r = await db.collection('replies').get();
-                    setStats({ topics: t.size, replies: r.size });
-                } catch (err) { alert("Error: " + err.message); }
+                    let count = 0;
+                    repliesSnap.forEach(doc => {
+                        if (!doc.data().topicId || !topicIds.has(doc.data().topicId)) {
+                            batch.delete(doc.ref);
+                            count++;
+                        }
+                    });
+                    if(count>0) await batch.commit();
+                    alert(`Cleaned ${count} ghosts.`);
+                    setStats(prev => ({...prev, replies: prev.replies - count}));
+                } catch(e) { alert(e.message); }
                 setCleaning(false);
             };
 
-            const cleanOrphans = async () => {
-                if(!confirm("This will find and delete 'Ghost Replies' (replies to deleted topics).")) return;
+            const runPrune = async () => {
+                if(!confirm("Delete topics > 1 year old?")) return;
                 setCleaning(true);
                 try {
-                    // 1. Get all Topic IDs
-                    const topicsSnap = await db.collection('topics').get();
-                    const topicIds = new Set(topicsSnap.docs.map(d => d.id));
-                    
-                    // 2. Get all Replies
-                    const repliesSnap = await db.collection('replies').get();
+                    const date = new Date(); date.setFullYear(date.getFullYear()-1);
+                    const snap = await db.collection('topics').where('createdAt', '<', date).limit(50).get();
                     const batch = db.batch();
-                    let deleteCount = 0;
-                    
-                    // 3. Mark Orphans for deletion
-                    repliesSnap.forEach(doc => {
-                        const data = doc.data();
-                        if (!data.topicId || !topicIds.has(data.topicId)) {
-                            batch.delete(doc.ref);
-                            deleteCount++;
-                        }
-                    });
-                    
-                    if (deleteCount > 0) {
-                        await batch.commit();
-                        alert(`Success! Removed ${deleteCount} ghost replies.`);
-                        setStats(prev => ({...prev, replies: prev.replies - deleteCount}));
-                    } else {
-                        alert("Database is clean! No ghost replies found.");
+                    for(const d of snap.docs) {
+                        batch.delete(d.ref);
+                        const rs = await db.collection('replies').where('topicId','==',d.id).get();
+                        rs.forEach(r => batch.delete(r.ref));
                     }
-                } catch (e) { alert(e.message); }
+                    await batch.commit();
+                    alert(`Pruned ${snap.size} topics.`);
+                } catch(e) { alert(e.message); }
                 setCleaning(false);
             };
 
@@ -188,35 +205,16 @@
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
                     <div className="glass-panel p-8 rounded-2xl max-w-md w-full relative">
                         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white"><i className="fa-solid fa-xmark text-xl"></i></button>
-                        <h2 className="text-2xl font-bold text-white mb-6"><i className="fa-solid fa-shield-halved text-indigo-500 mr-2"></i> Admin Panel</h2>
-                        
+                        <h2 className="text-2xl font-bold text-white mb-6">Admin Panel</h2>
                         {loading ? <p className="text-slate-400">Loading...</p> : (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-800 p-4 rounded-xl text-center border border-slate-700">
-                                        <div className="text-3xl font-bold text-white">{stats.topics}</div>
-                                        <div className="text-xs text-slate-400 uppercase">Topics</div>
-                                    </div>
-                                    <div className="bg-slate-800 p-4 rounded-xl text-center border border-slate-700">
-                                        <div className="text-3xl font-bold text-white">{stats.replies}</div>
-                                        <div className="text-xs text-slate-400 uppercase">Replies</div>
-                                    </div>
+                                    <div className="bg-slate-800 p-4 rounded-xl text-center"><div className="text-3xl font-bold text-white">{stats.topics}</div><div className="text-xs text-slate-400">Topics</div></div>
+                                    <div className="bg-slate-800 p-4 rounded-xl text-center"><div className="text-3xl font-bold text-white">{stats.replies}</div><div className="text-xs text-slate-400">Replies</div></div>
                                 </div>
-
                                 <div className="border-t border-slate-700 pt-6 space-y-3">
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-2">Maintenance</h3>
-                                    
-                                    {/* Orphan Fix Button */}
-                                    <button onClick={cleanOrphans} disabled={cleaning} className="w-full btn-primary py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2">
-                                        {cleaning ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-ghost"></i>}
-                                        Clean Ghost Replies
-                                    </button>
-
-                                    {/* Prune Button */}
-                                    <button onClick={runCleanup} disabled={cleaning} className="w-full btn-danger py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2">
-                                        {cleaning ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-calendar-xmark"></i>}
-                                        Prune Old Topics (>1 Year)
-                                    </button>
+                                    <button onClick={cleanOrphans} disabled={cleaning} className="w-full btn-primary py-2 rounded-lg text-sm">{cleaning?'...':'Clean Ghost Replies'}</button>
+                                    <button onClick={runPrune} disabled={cleaning} className="w-full btn-danger py-2 rounded-lg text-sm">{cleaning?'...':'Prune Old Topics'}</button>
                                 </div>
                             </div>
                         )}
@@ -230,25 +228,9 @@
             const userRef = db.collection('users').doc(user.uid);
             const doc = await userRef.get();
             if (!doc.exists) {
-                await userRef.set({
-                    displayName: user.displayName,
-                    photoURL: user.photoURL,
-                    bio: "Just joined BabaForum!",
-                    followers: [],
-                    following: [],
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                await userRef.set({ displayName: user.displayName, photoURL: user.photoURL, bio: "New member", followers: [], following: [], createdAt: firebase.firestore.FieldValue.serverTimestamp(), postCount: 0 });
             }
         };
-
-        function RichText({ content }) {
-            const getMarkdownText = () => {
-                if (!window.marked) return { __html: content };
-                const safeText = content.replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
-                return { __html: marked.parse(safeText) };
-            };
-            return <div className="prose text-slate-300 text-sm leading-relaxed" dangerouslySetInnerHTML={getMarkdownText()} />;
-        }
 
         function Notifications({ user, onClose }) {
             const [notes, setNotes] = useState([]);
@@ -257,24 +239,16 @@
                     .onSnapshot(snap => setNotes(snap.docs.map(d => ({id: d.id, ...d.data()}))));
                 return () => unsub();
             }, [user]);
-
-            const markRead = (id) => {
-                db.collection('notifications').doc(id).update({ read: true });
-            };
-
+            const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
             return (
                 <div className="absolute top-16 right-4 w-80 glass-panel rounded-xl shadow-2xl overflow-hidden z-50 border border-slate-600">
-                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-                        <h3 className="font-bold text-white text-sm">Notifications</h3>
-                        <button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button>
-                    </div>
+                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center"><h3 className="font-bold text-white text-sm">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
                     <div className="max-h-80 overflow-y-auto">
-                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications yet.</div>}
+                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications.</div>}
                         {notes.map(n => (
                             <div key={n.id} onClick={() => markRead(n.id)} className={`p-3 border-b border-slate-700/50 text-sm cursor-pointer hover:bg-slate-700 ${n.read ? 'opacity-50' : 'bg-indigo-500/10'}`}>
                                 <div className="font-bold text-indigo-300">{n.fromName}</div>
                                 <div className="text-slate-300">{n.message}</div>
-                                <div className="text-xs text-slate-500 mt-1">{new Date(n.createdAt?.seconds * 1000).toLocaleTimeString()}</div>
                             </div>
                         ))}
                     </div>
@@ -286,25 +260,19 @@
             const [showNotes, setShowNotes] = useState(false);
             const [unreadCount, setUnreadCount] = useState(0);
             const isAdmin = user && user.uid === ADMIN_UID;
-
             useEffect(() => {
                 if(!user) return;
-                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).where('read', '==', false)
-                    .onSnapshot(snap => setUnreadCount(snap.size));
+                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).where('read', '==', false).onSnapshot(snap => setUnreadCount(snap.size));
                 return () => unsub();
             }, [user]);
-
             const handleLogin = () => {
                 if (!auth) return alert("Config Error");
                 auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
             };
-
             return (
                 <nav className="glass-panel sticky top-0 z-50 border-b border-slate-700/50">
                     <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('home')}>
-                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">BabaForum</span>
-                        </div>
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('home')}><span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">BabaForum</span></div>
                         <div className="flex items-center gap-4">
                             {user ? (
                                 <>
@@ -316,14 +284,10 @@
                                         </button>
                                         {showNotes && <Notifications user={user} onClose={() => setShowNotes(false)} />}
                                     </div>
-                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-8 h-8 rounded-full overflow-hidden border border-slate-600">
-                                        <img src={user.photoURL} />
-                                    </button>
+                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-8 h-8 rounded-full overflow-hidden border border-slate-600"><img src={user.photoURL} /></button>
                                     <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-white"><i className="fa-solid fa-right-from-bracket"></i></button>
                                 </>
-                            ) : (
-                                <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium text-sm">Sign In</button>
-                            )}
+                            ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium text-sm">Sign In</button>}
                         </div>
                     </div>
                 </nav>
@@ -336,14 +300,7 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 setUploading(true);
-                try {
-                    const base64String = await compressImage(file);
-                    onUpload(base64String);
-                } catch (error) {
-                    alert("Upload failed: " + error.message);
-                } finally {
-                    setUploading(false);
-                }
+                try { const b64 = await compressImage(file); onUpload(b64); } catch (e) { alert(e.message); } finally { setUploading(false); }
             };
             return (
                 <label className="cursor-pointer text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm">
@@ -357,28 +314,34 @@
         function CreateTopic({ user, onViewChange }) {
             const [form, setForm] = useState({ title: '', content: '', tag: 'General' });
             const [submitting, setSubmitting] = useState(false);
-
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setSubmitting(true);
+                
+                // EXTRACT IMAGE FROM CONTENT FOR PREVIEW
+                const imgMatch = form.content.match(/!\[Image\]\((.*?)\)/);
+                const topicImage = imgMatch ? imgMatch[1] : null;
+                
+                // CLEAN CONTENT FOR PREVIEW TEXT (Remove image code)
+                const cleanContent = form.content.replace(/!\[Image\]\(.*?\)/g, '[Image] ');
+                const previewText = cleanContent.substring(0, 100) + '...';
+
                 const userRef = db.collection('users').doc(user.uid);
                 const userDoc = await userRef.get();
                 const currentCount = (userDoc.data()?.postCount || 0) + 1;
-                const newRank = getRank(currentCount);
                 await userRef.update({ postCount: currentCount });
+                
                 await db.collection('topics').add({
-                    ...form, preview: form.content.substring(0, 100)+'...', 
-                    authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, authorRank: newRank.label,
+                    ...form, 
+                    preview: previewText, // Use clean preview
+                    topicImage: topicImage, // Store image separately for Feed
+                    authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, authorRank: getRank(currentCount).label,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(), replyCount: 0, likes: 0, likedBy: [], isPinned: false
                 });
                 setSubmitting(false);
                 onViewChange('home');
             };
-
-            const handleImageInsert = (url) => {
-                setForm(prev => ({ ...prev, content: prev.content + `\n![Image](${url})\n` }));
-            };
-
+            const handleImageInsert = (url) => setForm(prev => ({ ...prev, content: prev.content + `\n![Image](${url})\n` }));
             return (
                 <div className="max-w-2xl mx-auto p-4 fade-in">
                     <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4"><i className="fa-solid fa-arrow-left"></i> Back</button>
@@ -386,13 +349,8 @@
                         <h2 className="text-2xl font-bold text-white mb-6">New Topic</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <input className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" placeholder="Title" value={form.title} onChange={e=>setForm({...form, title:e.target.value})} required />
-                            <select className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}>
-                                <option>General</option><option>Help</option><option>Showcase</option><option>Ideas</option>
-                            </select>
-                            <div>
-                                <textarea className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white mb-2" placeholder="Write something..." value={form.content} onChange={e=>setForm({...form, content:e.target.value})} required />
-                                <ImageUpload onUpload={handleImageInsert} />
-                            </div>
+                            <select className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}><option>General</option><option>Help</option><option>Showcase</option><option>Ideas</option></select>
+                            <div><textarea className="w-full h-48 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white mb-2" placeholder="Write something..." value={form.content} onChange={e=>setForm({...form, content:e.target.value})} required /><ImageUpload onUpload={handleImageInsert} /></div>
                             <button type="submit" disabled={submitting} className="w-full btn-primary text-white py-3 rounded-xl font-bold">{submitting ? "Publishing..." : "Post"}</button>
                         </form>
                     </div>
@@ -400,237 +358,7 @@
             );
         }
 
-        function ThreadView({ user, topic, onViewChange, setViewUserId }) {
-            const [replies, setReplies] = useState([]);
-            const [newReply, setNewReply] = useState('');
-            const bottomRef = useRef(null);
-            const isAdmin = user && user.uid === ADMIN_UID;
-
-            useEffect(() => {
-                if(!topic) return;
-                const unsub = db.collection('replies').where('topicId','==',topic.id).orderBy('createdAt','asc').onSnapshot(s => setReplies(s.docs.map(d=>({id:d.id, ...d.data()}))));
-                return () => unsub();
-            }, [topic]);
-
-            const postReply = async (e) => {
-                e.preventDefault(); if(!newReply.trim()) return;
-                const batch = db.batch();
-                const userRef = db.collection('users').doc(user.uid);
-                const userDoc = await userRef.get();
-                const currentCount = (userDoc.data()?.postCount || 0) + 1;
-                batch.update(userRef, { postCount: currentCount });
-                const rank = getRank(currentCount);
-                batch.set(db.collection('replies').doc(), { 
-                    content: newReply, topicId: topic.id, authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, authorRank: rank.label,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] 
-                });
-                batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(1) });
-                if (topic.authorId !== user.uid) {
-                    batch.set(db.collection('notifications').doc(), {
-                        toUserId: topic.authorId, fromName: user.displayName, message: "replied to your topic", 
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false
-                    });
-                }
-                await batch.commit(); 
-                setNewReply(''); 
-                setTimeout(() => bottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
-            };
-
-            const handleImageInsert = (url) => setNewReply(prev => prev + `\n![Image](${url})\n`);
-            
-            // CASCADING DELETE (Manual Topic Deletion Handler)
-            const deleteReply = async (id) => { 
-                if(confirm("Delete?")) { 
-                    const b = db.batch(); 
-                    b.delete(db.collection('replies').doc(id)); 
-                    b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); 
-                    await b.commit(); 
-                }
-            };
-
-            return (
-                <div className="max-w-4xl mx-auto p-4 h-screen flex flex-col fade-in">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4 w-fit"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="flex-1 overflow-y-auto space-y-6 pr-2 pb-20">
-                        <div className="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500">
-                            <div className="flex items-center gap-3 mb-4">
-                                <img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/>
-                                <div>
-                                    <div className="font-medium text-white">{topic.authorName}</div>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{topic.authorRank || 'Member'}</span>
-                                </div>
-                            </div>
-                            <h1 className="text-2xl font-bold text-white mb-4">{topic.title}</h1>
-                            <RichText content={topic.content} />
-                        </div>
-                        {replies.map(r => (
-                            <div key={r.id} className="glass-panel p-4 rounded-xl flex gap-4">
-                                <img src={r.authorPhoto} className="w-8 h-8 rounded-full cursor-pointer" onClick={() => { setViewUserId(r.authorId); onViewChange('profile'); }}/>
-                                <div className="flex-1">
-                                    <div className="flex justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-indigo-300 font-medium">{r.authorName}</span>
-                                            <span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{r.authorRank || 'Member'}</span>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {(isAdmin || user?.uid === r.authorId) && <button onClick={()=>deleteReply(r.id)} className="text-slate-600 hover:text-red-400"><i className="fa-solid fa-trash text-xs"></i></button>}
-                                        </div>
-                                    </div>
-                                    <RichText content={r.content} />
-                                </div>
-                            </div>
-                        ))}
-                        <div ref={bottomRef}></div>
-                    </div>
-                    {user && (
-                        <div className="bg-[#0f172a] pt-2">
-                            <div className="mb-2"><ImageUpload onUpload={handleImageInsert}/></div>
-                            <form onSubmit={postReply} className="relative">
-                                <textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white" placeholder="Reply..." rows="2"/>
-                                <button type="submit" className="absolute right-3 bottom-3 text-indigo-400"><i className="fa-solid fa-paper-plane"></i></button>
-                            </form>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        function ProfileView({ viewUserId, currentUser, onViewChange }) {
-            const [profile, setProfile] = useState(null);
-            const [posts, setPosts] = useState([]);
-            const [isFollowing, setIsFollowing] = useState(false);
-            const [editing, setEditing] = useState(false);
-            const [newName, setNewName] = useState("");
-            const [newBio, setNewBio] = useState("");
-
-            useEffect(() => {
-                const loadProfile = async () => {
-                    if(!viewUserId) return;
-                    const doc = await db.collection('users').doc(viewUserId).get();
-                    if (doc.exists) {
-                        const data = doc.data();
-                        setProfile(data);
-                        setNewName(data.displayName);
-                        setNewBio(data.bio || "");
-                        if (currentUser) {
-                            const myDoc = await db.collection('users').doc(currentUser.uid).get();
-                            const myData = myDoc.data();
-                            setIsFollowing(myData?.following?.includes(viewUserId));
-                        }
-                    }
-                    try {
-                        const postsSnap = await db.collection('topics').where('authorId', '==', viewUserId).orderBy('createdAt', 'desc').limit(20).get();
-                        setPosts(postsSnap.docs.map(d => ({id: d.id, ...d.data()})));
-                    } catch (err) {
-                        if(err.message.includes("index")) {
-                            if(confirm("Missing Index! Click OK to create it in Firebase console.")) {
-                                const match = err.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
-                                if(match) window.open(match[0], '_blank');
-                            }
-                        }
-                    }
-                };
-                if(db && viewUserId) loadProfile();
-            }, [viewUserId, currentUser]);
-
-            const toggleFollow = async () => {
-                if(!currentUser) return alert("Sign in to follow!");
-                const myRef = db.collection('users').doc(currentUser.uid);
-                const theirRef = db.collection('users').doc(viewUserId);
-                const batch = db.batch();
-                if(isFollowing) {
-                    batch.update(myRef, { following: firebase.firestore.FieldValue.arrayRemove(viewUserId) });
-                    batch.update(theirRef, { followers: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
-                } else {
-                    batch.update(myRef, { following: firebase.firestore.FieldValue.arrayUnion(viewUserId) });
-                    batch.update(theirRef, { followers: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
-                    batch.set(db.collection('notifications').doc(), {
-                        toUserId: viewUserId, fromName: currentUser.displayName, message: "started following you", createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false
-                    });
-                }
-                await batch.commit();
-                setIsFollowing(!isFollowing);
-                setProfile(prev => ({...prev, followers: isFollowing ? prev.followers.slice(0,-1) : [...(prev.followers||[]), currentUser.uid] }));
-            };
-
-            const saveProfile = async () => {
-                await db.collection('users').doc(currentUser.uid).update({ displayName: newName, bio: newBio });
-                setProfile(prev => ({ ...prev, displayName: newName, bio: newBio }));
-                setEditing(false);
-            };
-
-            if(!profile) return <div className="text-center p-10 text-slate-500">Loading Profile...</div>;
-            const isMe = currentUser && currentUser.uid === viewUserId;
-            const rank = getRank(profile.postCount || 0);
-
-            return (
-                <div className="max-w-4xl mx-auto p-4 fade-in">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-6 flex items-center gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="glass-panel p-8 rounded-2xl mb-8 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
-                        <img src={profile.photoURL} className="w-24 h-24 rounded-full border-4 border-indigo-500/30 shadow-xl"/>
-                        <div className="flex-1">
-                            {editing ? (
-                                <div className="space-y-3">
-                                    <input className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Display Name"/>
-                                    <textarea className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newBio} onChange={e=>setNewBio(e.target.value)} placeholder="Bio"/>
-                                    <div className="flex gap-2 justify-center md:justify-start">
-                                        <button onClick={saveProfile} className="btn-primary px-4 py-1 rounded text-white text-sm">Save</button>
-                                        <button onClick={()=>setEditing(false)} className="text-slate-400 text-sm">Cancel</button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex items-center justify-center md:justify-start gap-3">
-                                        <h1 className="text-3xl font-bold text-white">{profile.displayName}</h1>
-                                        <span className={`text-xs px-2 py-1 rounded ${rank.class}`}>{rank.label}</span>
-                                    </div>
-                                    <p className="text-indigo-300 mt-1 mb-4">{profile.bio}</p>
-                                    <div className="flex gap-6 justify-center md:justify-start text-sm text-slate-400 mb-4">
-                                        <span><strong className="text-white">{profile.followers?.length || 0}</strong> Followers</span>
-                                        <span><strong className="text-white">{profile.following?.length || 0}</strong> Following</span>
-                                    </div>
-                                    {isMe ? <button onClick={()=>setEditing(true)} className="btn-outline px-4 py-2 rounded-lg text-sm">Edit Profile</button> : <button onClick={toggleFollow} className={`px-6 py-2 rounded-lg font-medium ${isFollowing ? 'bg-slate-700 text-slate-300' : 'btn-primary text-white'}`}>{isFollowing ? 'Following' : 'Follow'}</button>}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-4">Recent Posts</h3>
-                    <div className="space-y-3">
-                        {posts.length === 0 && <div className="text-slate-500 text-sm italic">No posts yet (or index building...)</div>}
-                        {posts.map(post => (<div key={post.id} className="glass-panel p-4 rounded-xl"><h4 className="text-lg font-semibold text-slate-200">{post.title}</h4><div className="text-slate-500 text-xs mt-2">{post.createdAt ? new Date(post.createdAt.seconds*1000).toLocaleDateString() : 'Just now'}</div></div>))}
-                    </div>
-                </div>
-            );
-        }
-
-        function LikeButton({ user, docId, collection, likes, likedBy, authorId }) {
-            const [isLiked, setIsLiked] = useState(false);
-            const [count, setCount] = useState(likes || 0);
-            useEffect(() => { if (user && likedBy?.includes(user.uid)) setIsLiked(true); }, [user, likedBy]);
-            const handleLike = async (e) => {
-                e.stopPropagation();
-                if (!user) return alert("Please sign in to vote!");
-                const docRef = db.collection(collection).doc(docId);
-                const newStatus = !isLiked;
-                setIsLiked(newStatus);
-                setCount(prev => newStatus ? prev + 1 : prev - 1);
-                try {
-                    const batch = db.batch();
-                    batch.update(docRef, {
-                        likes: firebase.firestore.FieldValue.increment(newStatus ? 1 : -1),
-                        likedBy: newStatus ? firebase.firestore.FieldValue.arrayUnion(user.uid) : firebase.firestore.FieldValue.arrayRemove(user.uid)
-                    });
-                    if (newStatus && authorId !== user.uid) {
-                        batch.set(db.collection('notifications').doc(), {
-                            toUserId: authorId, fromName: user.displayName, message: "liked your post", createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false
-                        });
-                    }
-                    await batch.commit();
-                } catch (error) { setIsLiked(!newStatus); setCount(prev => newStatus ? prev - 1 : prev + 1); }
-            };
-            return <button onClick={handleLike} className={`flex items-center gap-1 px-2 py-1 rounded-md ${isLiked ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:bg-slate-700'}`}><i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart`}></i><span className="text-xs font-bold">{count > 0 ? count : ''}</span></button>;
-        }
-
+        // --- UPDATED TOPIC LIST (VISUAL FEED) ---
         function TopicList({ user, onViewChange, setCurrentTopic, setViewUserId }) {
             const [topics, setTopics] = useState([]);
             const [loading, setLoading] = useState(true);
@@ -658,22 +386,7 @@
             });
 
             const goToProfile = (e, uid) => { e.stopPropagation(); setViewUserId(uid); onViewChange('profile'); };
-            
-            // NEW: Cascading Delete for Topics
-            const deleteTopic = async (e, topic) => { 
-                e.stopPropagation(); 
-                if(confirm("Delete topic and ALL replies?")) {
-                    const batch = db.batch();
-                    batch.delete(db.collection('topics').doc(topic.id));
-                    
-                    // Get all replies for this topic
-                    const replySnap = await db.collection('replies').where('topicId', '==', topic.id).get();
-                    replySnap.forEach(r => batch.delete(r.ref));
-                    
-                    await batch.commit();
-                }
-            };
-            
+            const deleteTopic = async (e, t) => { e.stopPropagation(); if(confirm("Delete topic + replies?")) { const b = db.batch(); b.delete(db.collection('topics').doc(t.id)); const rs = await db.collection('replies').where('topicId','==',t.id).get(); rs.forEach(r => b.delete(r.ref)); await b.commit(); }};
             const togglePin = async (e, topic) => { e.stopPropagation(); await db.collection('topics').doc(topic.id).update({ isPinned: !topic.isPinned }); };
 
             return (
@@ -691,10 +404,10 @@
                     {loading ? <div className="text-slate-500 text-center">Loading...</div> : displayTopics.map(topic => (
                         <div key={topic.id} onClick={() => {setCurrentTopic(topic); onViewChange('thread')}} className={`glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 flex gap-4 ${topic.isPinned ? 'border-l-4 border-amber-400' : ''}`}>
                             <div onClick={(e)=>goToProfile(e, topic.authorId)} className="flex-shrink-0 pt-1 cursor-pointer hover:opacity-80"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/></div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <div className="flex justify-between">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-lg font-semibold text-slate-200">{topic.title}</h3>
+                                        <h3 className="text-lg font-semibold text-slate-200 truncate">{topic.title}</h3>
                                         {topic.isPinned && <i className="fa-solid fa-thumbtack text-amber-400 text-xs"></i>}
                                     </div>
                                     <div className="flex gap-2">
@@ -702,6 +415,14 @@
                                         {(isAdmin || user?.uid === topic.authorId) && <button onClick={(e)=>deleteTopic(e,topic)} className="text-slate-500 hover:text-red-400"><i className="fa-solid fa-trash"></i></button>}
                                     </div>
                                 </div>
+                                
+                                {/* VISUAL FEED IMAGE */}
+                                {topic.topicImage && (
+                                    <div className="w-full h-48 bg-slate-900 rounded-lg my-3 overflow-hidden border border-slate-700">
+                                        <img src={topic.topicImage} className="w-full h-full object-cover" alt="Preview"/>
+                                    </div>
+                                )}
+
                                 <div className="text-slate-400 text-sm line-clamp-2 mt-1"><RichText content={topic.preview||""}/></div>
                                 <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
                                     <span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{topic.authorRank || 'Member'}</span>
@@ -718,6 +439,101 @@
             );
         }
 
+        // --- Standard ThreadView, ProfileView, LikeButton, App (Simplified for brevity as they haven't changed much) ---
+        function ThreadView({ user, topic, onViewChange, setViewUserId }) {
+            const [replies, setReplies] = useState([]);
+            const [newReply, setNewReply] = useState('');
+            const bottomRef = useRef(null);
+            const isAdmin = user && user.uid === ADMIN_UID;
+            useEffect(() => { if(!topic) return; const u = db.collection('replies').where('topicId','==',topic.id).orderBy('createdAt','asc').onSnapshot(s => setReplies(s.docs.map(d=>({id:d.id, ...d.data()})))); return ()=>u(); }, [topic]);
+            const postReply = async (e) => {
+                e.preventDefault(); if(!newReply.trim()) return;
+                const batch = db.batch();
+                const uRef = db.collection('users').doc(user.uid);
+                const uDoc = await uRef.get();
+                const cnt = (uDoc.data()?.postCount||0)+1;
+                batch.update(uRef,{postCount:cnt});
+                batch.set(db.collection('replies').doc(), { content: newReply, topicId: topic.id, authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, authorRank: getRank(cnt).label, createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] });
+                batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(1) });
+                if(topic.authorId!==user.uid) batch.set(db.collection('notifications').doc(), { toUserId: topic.authorId, fromName: user.displayName, message: "replied to your topic", createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false });
+                await batch.commit(); setNewReply(''); setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:'smooth'}),100);
+            };
+            const handleImageInsert = (url) => setNewReply(p => p + `\n![Image](${url})\n`);
+            const deleteReply = async (id) => { if(confirm("Delete?")) { const b = db.batch(); b.delete(db.collection('replies').doc(id)); b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); await b.commit(); }};
+            return (
+                <div className="max-w-4xl mx-auto p-4 h-screen flex flex-col fade-in">
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4 w-fit"><i className="fa-solid fa-arrow-left"></i> Back</button>
+                    <div className="flex-1 overflow-y-auto space-y-6 pr-2 pb-20">
+                        <div className="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500">
+                            <div className="flex items-center gap-3 mb-4"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/><div><div className="font-medium text-white">{topic.authorName}</div><span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{topic.authorRank}</span></div></div>
+                            <h1 className="text-2xl font-bold text-white mb-4">{topic.title}</h1>
+                            <RichText content={topic.content} />
+                        </div>
+                        {replies.map(r => (
+                            <div key={r.id} className="glass-panel p-4 rounded-xl flex gap-4"><img src={r.authorPhoto} className="w-8 h-8 rounded-full cursor-pointer" onClick={()=>{setViewUserId(r.authorId);onViewChange('profile')}}/><div className="flex-1"><div className="flex justify-between mb-2"><div className="flex items-center gap-2"><span className="text-indigo-300 font-medium">{r.authorName}</span><span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{r.authorRank}</span></div><div className="flex gap-2">{(isAdmin||user?.uid===r.authorId)&&<button onClick={()=>deleteReply(r.id)} className="text-slate-600 hover:text-red-400"><i className="fa-solid fa-trash text-xs"></i></button>}</div></div><RichText content={r.content}/></div></div>
+                        ))}
+                        <div ref={bottomRef}></div>
+                    </div>
+                    {user && <div className="bg-[#0f172a] pt-2"><div className="mb-2"><ImageUpload onUpload={handleImageInsert}/></div><form onSubmit={postReply} className="relative"><textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white" placeholder="Reply..." rows="2"/><button type="submit" className="absolute right-3 bottom-3 text-indigo-400"><i className="fa-solid fa-paper-plane"></i></button></form></div>}
+                </div>
+            );
+        }
+
+        function ProfileView({ viewUserId, currentUser, onViewChange }) {
+            const [profile, setProfile] = useState(null);
+            const [posts, setPosts] = useState([]);
+            const [isFollowing, setIsFollowing] = useState(false);
+            const [editing, setEditing] = useState(false);
+            const [newName, setNewName] = useState("");
+            const [newBio, setNewBio] = useState("");
+            useEffect(() => {
+                const load = async () => {
+                    if(!viewUserId) return;
+                    const d = await db.collection('users').doc(viewUserId).get();
+                    if(d.exists) {
+                        const data = d.data(); setProfile(data); setNewName(data.displayName); setNewBio(data.bio||"");
+                        if(currentUser) { const my = await db.collection('users').doc(currentUser.uid).get(); setIsFollowing(my.data().following?.includes(viewUserId)); }
+                    }
+                    try {
+                        const snap = await db.collection('topics').where('authorId','==',viewUserId).orderBy('createdAt','desc').limit(20).get();
+                        setPosts(snap.docs.map(d=>({id:d.id,...d.data()})));
+                    } catch(e) { console.log(e); }
+                };
+                if(db && viewUserId) load();
+            }, [viewUserId, currentUser]);
+            const toggleFollow = async () => {
+                if(!currentUser) return alert("Sign in!");
+                const my = db.collection('users').doc(currentUser.uid); const th = db.collection('users').doc(viewUserId); const b = db.batch();
+                if(isFollowing) { b.update(my,{following:firebase.firestore.FieldValue.arrayRemove(viewUserId)}); b.update(th,{followers:firebase.firestore.FieldValue.arrayRemove(currentUser.uid)}); }
+                else { b.update(my,{following:firebase.firestore.FieldValue.arrayUnion(viewUserId)}); b.update(th,{followers:firebase.firestore.FieldValue.arrayUnion(currentUser.uid)}); b.set(db.collection('notifications').doc(), {toUserId:viewUserId, fromName:currentUser.displayName, message:"followed you", createdAt:firebase.firestore.FieldValue.serverTimestamp(), read:false}); }
+                await b.commit(); setIsFollowing(!isFollowing); setProfile(p=>({...p, followers: isFollowing?p.followers.slice(0,-1):[...(p.followers||[]),currentUser.uid]}));
+            };
+            const save = async () => { await db.collection('users').doc(currentUser.uid).update({displayName:newName, bio:newBio}); setProfile(p=>({...p, displayName:newName, bio:newBio})); setEditing(false); };
+            if(!profile) return <div className="text-center p-10 text-slate-500">Loading...</div>;
+            const isMe = currentUser && currentUser.uid === viewUserId;
+            return (
+                <div className="max-w-4xl mx-auto p-4 fade-in">
+                    <button onClick={()=>onViewChange('home')} className="text-slate-400 mb-6 flex gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
+                    <div className="glass-panel p-8 rounded-2xl mb-8 flex flex-col md:flex-row items-center gap-6">
+                        <img src={profile.photoURL} className="w-24 h-24 rounded-full border-4 border-indigo-500/30"/>
+                        <div className="flex-1 text-center md:text-left">
+                            {editing ? (
+                                <div className="space-y-3"><input className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newName} onChange={e=>setNewName(e.target.value)}/><textarea className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newBio} onChange={e=>setNewBio(e.target.value)}/><button onClick={save} className="btn-primary px-4 py-1 rounded text-white text-sm">Save</button></div>
+                            ) : (
+                                <>
+                                    <h1 className="text-3xl font-bold text-white">{profile.displayName}</h1>
+                                    <p className="text-indigo-300 mt-1 mb-4">{profile.bio}</p>
+                                    <div className="flex gap-6 justify-center md:justify-start text-sm text-slate-400 mb-4"><span><strong>{profile.followers?.length||0}</strong> Followers</span><span><strong>{profile.following?.length||0}</strong> Following</span></div>
+                                    {isMe ? <button onClick={()=>setEditing(true)} className="btn-outline px-4 py-2 rounded-lg text-sm">Edit</button> : <button onClick={toggleFollow} className={`px-6 py-2 rounded-lg font-medium ${isFollowing?'bg-slate-700 text-slate-300':'btn-primary text-white'}`}>{isFollowing?'Following':'Follow'}</button>}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    <div className="space-y-3">{posts.map(p => (<div key={p.id} className="glass-panel p-4 rounded-xl flex gap-4"><div className="w-16 h-16 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0">{p.topicImage ? <img src={p.topicImage} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-600"><i className="fa-regular fa-file-lines"></i></div>}</div><div><h4 className="text-lg font-semibold text-slate-200">{p.title}</h4><div className="text-slate-500 text-xs">{new Date(p.createdAt?.seconds*1000).toLocaleDateString()}</div></div></div>))}</div>
+                </div>
+            );
+        }
+
         function App() {
             const [view, setView] = useState('home');
             const [user, setUser] = useState(null);
@@ -725,17 +541,8 @@
             const [viewUserId, setViewUserId] = useState(null);
             const [isConfigured, setIsConfigured] = useState(false);
             const [showAdmin, setShowAdmin] = useState(false);
-
-            useEffect(() => {
-                if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
-                    setIsConfigured(true);
-                    return auth.onAuthStateChanged(async (u) => {
-                        if(u) await ensureUserProfile(u);
-                        setUser(u);
-                    });
-                }
-            }, []);
-
+            useEffect(() => { if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") { setIsConfigured(true); return auth.onAuthStateChanged(async (u) => { if(u) await ensureUserProfile(u); setUser(u); }); } }, []);
+            const openProfile = () => { if(user) { setViewUserId(user.uid); setView('profile'); } };
             if (!isConfigured) return <SetupScreen />;
             return (
                 <div className="min-h-screen pb-10">
