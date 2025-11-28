@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BabaForum</title>
     
-    <!-- 1. NEW FONT: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PWA MANIFEST (Data URI for Single-File Install) -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
     
+    <!-- MOBILE META TAGS -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1041/1041916.png">
+
     <!-- ERROR HANDLER -->
     <script>
         window.onerror = function(msg, url, line) {
@@ -28,8 +32,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- FONT: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        /* 2. DELUXE DESIGN STYLES */
         body { 
             background-color: #0f172a; 
             background-image: radial-gradient(circle at 15% 25%, rgba(99, 102, 241, 0.15), transparent 40%), 
@@ -37,6 +43,7 @@
             background-attachment: fixed;
             color: #e2e8f0; 
             font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
         .glass-panel { 
             background: rgba(30, 41, 59, 0.7); 
@@ -81,6 +88,7 @@
         .badge-member { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; border: 1px solid rgba(5, 150, 105, 0.4); }
         .badge-regular { background: rgba(37, 99, 235, 0.2); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.4); }
         .badge-legend { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(180, 83, 9, 0.2)); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.5); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1); }
+        
         ::-webkit-scrollbar { width: 10px; }
         ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
         ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 5px; border: 2px solid rgba(15, 23, 42, 0.5); }
@@ -92,7 +100,7 @@
     <div id="root"></div>
     <script type="text/babel">
         // ==========================================
-      const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
+        const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
           authDomain: "babaforum-500b9.firebaseapp.com",
@@ -163,15 +171,14 @@
             }
         };
 
-        // --- 2. UI COMPONENTS ---
+        // --- 2. BASIC UI COMPONENTS ---
 
         function SetupScreen() {
             return (
                 <div className="min-h-screen flex items-center justify-center p-4">
                     <div className="glass-panel p-10 rounded-3xl text-center fade-in max-w-md">
-                        <div className="w-16 h-16 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl"><i className="fa-solid fa-triangle-exclamation"></i></div>
                         <h1 className="text-3xl font-extrabold text-white mb-3">Setup Required</h1>
-                        <p className="text-slate-400 mb-8 text-lg">Please configure your Firebase keys in the HTML file to continue.</p>
+                        <p className="text-slate-400 mb-8 text-lg">Please configure your Firebase keys in the HTML file.</p>
                         <button onClick={() => window.location.reload()} className="btn-primary text-white px-8 py-3 rounded-xl font-bold tracking-wide">Refresh App</button>
                     </div>
                 </div>
@@ -179,7 +186,6 @@
         }
 
         function Lightbox({ src, onClose }) {
-            // FIX: High Z-Index to pop out
             return (
                 <div className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 cursor-pointer fade-in" onClick={onClose}>
                     <img src={src} className="max-w-full max-h-full rounded-2xl shadow-2xl cursor-default" onClick={e => e.stopPropagation()} />
@@ -280,6 +286,36 @@
             );
         }
 
+        // --- NEW: INSTALL PROMPT LOGIC ---
+        function InstallButton() {
+            const [deferredPrompt, setDeferredPrompt] = useState(null);
+            
+            useEffect(() => {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    setDeferredPrompt(e);
+                });
+            }, []);
+
+            const handleInstall = async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    setDeferredPrompt(null);
+                }
+            };
+
+            if (!deferredPrompt) return null;
+
+            return (
+                <button onClick={handleInstall} className="text-slate-400 hover:text-indigo-400 p-2 transition-colors relative group" title="Install App">
+                    <i className="fa-solid fa-download text-xl"></i>
+                    <span className="absolute top-10 right-0 bg-slate-800 text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 whitespace-nowrap">Install App</span>
+                </button>
+            );
+        }
+
         function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId }) {
             const [showNotes, setShowNotes] = useState(false);
             const [unreadCount, setUnreadCount] = useState(0);
@@ -298,6 +334,7 @@
                             <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tight">BabaForum</span>
                         </div>
                         <div className="flex items-center gap-5">
+                            <InstallButton /> <!-- New Install Button -->
                             {user ? (
                                 <>
                                     {isAdmin && <button onClick={onOpenAdmin} className="text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 p-2 rounded-lg"><i className="fa-solid fa-shield-halved"></i></button>}
@@ -388,7 +425,7 @@
             );
         }
 
-        // --- 3. PAGE VIEWS (Must come after components) ---
+        // --- 3. PAGE VIEWS ---
 
         function ProfileView({ viewUserId, currentUser, onViewChange, setCurrentTopic }) {
             const [profile, setProfile] = useState(null);
@@ -460,7 +497,6 @@
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><i className="fa-solid fa-clock-rotate-left text-indigo-400"></i> Recent Activity</h3>
                     <div className="grid gap-4 md:grid-cols-2">
                         {posts.map(p => (
-                            // FIX: Added onClick to open thread
                             <div key={p.id} onClick={() => { setCurrentTopic(p); onViewChange('thread'); }} className="glass-panel glass-hover p-5 rounded-2xl flex gap-4 items-center transition-all hover:scale-[1.02] cursor-pointer">
                                 <div className="w-16 h-16 bg-slate-800/50 rounded-xl overflow-hidden flex-shrink-0 border border-white/5 relative">
                                     {p.topicImage ? <img src={p.topicImage} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-500"><i className="fa-regular fa-file-lines text-2xl"></i></div>}
@@ -500,7 +536,7 @@
             const deleteReply = async (id) => { if(confirm("Delete?")) { const b = db.batch(); b.delete(db.collection('replies').doc(id)); b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); await b.commit(); }};
             return (
                 <div className="max-w-4xl mx-auto p-6 h-[calc(100vh-80px)] flex flex-col fade-in">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 hover:text-white mb-4 w-fit flex items-center gap-2 font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back to Feed</button>
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4 w-fit flex items-center gap-2 font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back to Feed</button>
                     <div className="flex-1 overflow-y-auto space-y-6 pr-4 pb-6 custom-scrollbar">
                         <div className="glass-panel p-8 rounded-3xl shadow-xl relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
@@ -631,7 +667,6 @@
                 if(confirm("Delete topic?")) { 
                     const b = db.batch(); 
                     b.delete(db.collection('topics').doc(t.id)); 
-                    // FIX: Decrement count on delete
                     const userRef = db.collection('users').doc(t.authorId);
                     b.update(userRef, { postCount: firebase.firestore.FieldValue.increment(-1) });
                     const rs = await db.collection('replies').where('topicId','==',t.id).get(); 
@@ -683,6 +718,8 @@
                 </div>
             );
         }
+
+        // --- 4. APP (Defined Last) ---
 
         function App() {
             const [view, setView] = useState('home');
