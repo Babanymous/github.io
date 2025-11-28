@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BabaForum</title>
+    
     <script>window.onerror=function(m,u,l){if(m.includes("ResizeObserver"))return;document.body.innerHTML='<div style="color:red;padding:20px;background:black;"><h1>Error</h1><p>'+m+'</p><p>Line: '+l+'</p></div>'}</script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -13,6 +14,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Removed Storage SDK (Using Base64) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -43,7 +45,7 @@
     <div id="root"></div>
     <script type="text/babel">
         // ==========================================
-      const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
+        const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
           authDomain: "babaforum-500b9.firebaseapp.com",
@@ -108,6 +110,7 @@
             );
         }
 
+        // --- ADMIN PANEL WITH CLEANUP ---
         function AdminDashboard({ onClose }) {
             const [stats, setStats] = useState({ topics: 0, replies: 0 });
             const [loading, setLoading] = useState(true);
@@ -124,44 +127,60 @@
             }, []);
 
             const runCleanup = async () => {
-                if(!confirm("Are you sure? This will permanently delete topics older than 365 days.")) return;
+                if(!confirm("Are you sure? This deletes posts older than 365 days.")) return;
                 setCleaning(true);
                 try {
-                    // Calculate date 1 year ago
                     const oneYearAgo = new Date();
                     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-                    // Find old topics
-                    const snapshot = await db.collection('topics')
-                        .where('createdAt', '<', oneYearAgo)
-                        .limit(50) // Batch limit for safety
-                        .get();
-
-                    if(snapshot.empty) {
-                        alert("No old posts found!");
-                        setCleaning(false);
-                        return;
-                    }
-
-                    // Delete them
-                    const batch = db.batch();
-                    snapshot.docs.forEach(doc => {
-                        batch.delete(doc.ref);
-                    });
-                    await batch.commit();
+                    const snapshot = await db.collection('topics').where('createdAt', '<', oneYearAgo).limit(50).get();
                     
-                    alert(`Success! Deleted ${snapshot.size} old topics.`);
+                    const batch = db.batch();
+                    // Delete old topics AND their replies
+                    for (const doc of snapshot.docs) {
+                        batch.delete(doc.ref);
+                        const replies = await db.collection('replies').where('topicId', '==', doc.id).get();
+                        replies.forEach(r => batch.delete(r.ref));
+                    }
+                    await batch.commit();
+                    alert(`Deleted ${snapshot.size} old topics and their replies.`);
                     // Refresh stats
                     const t = await db.collection('topics').get();
-                    setStats(prev => ({...prev, topics: t.size}));
+                    const r = await db.collection('replies').get();
+                    setStats({ topics: t.size, replies: r.size });
+                } catch (err) { alert("Error: " + err.message); }
+                setCleaning(false);
+            };
 
-                } catch (err) {
-                    alert("Error: " + err.message);
-                    if(err.message.includes("index")) {
-                        const match = err.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
-                        if(match) window.open(match[0], '_blank');
+            const cleanOrphans = async () => {
+                if(!confirm("This will find and delete 'Ghost Replies' (replies to deleted topics).")) return;
+                setCleaning(true);
+                try {
+                    // 1. Get all Topic IDs
+                    const topicsSnap = await db.collection('topics').get();
+                    const topicIds = new Set(topicsSnap.docs.map(d => d.id));
+                    
+                    // 2. Get all Replies
+                    const repliesSnap = await db.collection('replies').get();
+                    const batch = db.batch();
+                    let deleteCount = 0;
+                    
+                    // 3. Mark Orphans for deletion
+                    repliesSnap.forEach(doc => {
+                        const data = doc.data();
+                        if (!data.topicId || !topicIds.has(data.topicId)) {
+                            batch.delete(doc.ref);
+                            deleteCount++;
+                        }
+                    });
+                    
+                    if (deleteCount > 0) {
+                        await batch.commit();
+                        alert(`Success! Removed ${deleteCount} ghost replies.`);
+                        setStats(prev => ({...prev, replies: prev.replies - deleteCount}));
+                    } else {
+                        alert("Database is clean! No ghost replies found.");
                     }
-                }
+                } catch (e) { alert(e.message); }
                 setCleaning(false);
             };
 
@@ -184,17 +203,20 @@
                                     </div>
                                 </div>
 
-                                <div className="border-t border-slate-700 pt-6">
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">Maintenance</h3>
-                                    <button 
-                                        onClick={runCleanup} 
-                                        disabled={cleaning}
-                                        className="w-full btn-danger py-3 rounded-xl font-bold flex items-center justify-center gap-2"
-                                    >
-                                        {cleaning ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-broom"></i>}
-                                        {cleaning ? "Cleaning..." : "Prune Posts > 1 Year Old"}
+                                <div className="border-t border-slate-700 pt-6 space-y-3">
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-2">Maintenance</h3>
+                                    
+                                    {/* Orphan Fix Button */}
+                                    <button onClick={cleanOrphans} disabled={cleaning} className="w-full btn-primary py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2">
+                                        {cleaning ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-ghost"></i>}
+                                        Clean Ghost Replies
                                     </button>
-                                    <p className="text-xs text-slate-500 mt-2 text-center">Frees up storage space instantly.</p>
+
+                                    {/* Prune Button */}
+                                    <button onClick={runCleanup} disabled={cleaning} className="w-full btn-danger py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2">
+                                        {cleaning ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-calendar-xmark"></i>}
+                                        Prune Old Topics (>1 Year)
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -393,33 +415,38 @@
             const postReply = async (e) => {
                 e.preventDefault(); if(!newReply.trim()) return;
                 const batch = db.batch();
-                
                 const userRef = db.collection('users').doc(user.uid);
                 const userDoc = await userRef.get();
                 const currentCount = (userDoc.data()?.postCount || 0) + 1;
                 batch.update(userRef, { postCount: currentCount });
                 const rank = getRank(currentCount);
-
                 batch.set(db.collection('replies').doc(), { 
                     content: newReply, topicId: topic.id, authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, authorRank: rank.label,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] 
                 });
                 batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(1) });
-                
                 if (topic.authorId !== user.uid) {
                     batch.set(db.collection('notifications').doc(), {
                         toUserId: topic.authorId, fromName: user.displayName, message: "replied to your topic", 
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false
                     });
                 }
-
                 await batch.commit(); 
                 setNewReply(''); 
                 setTimeout(() => bottomRef.current?.scrollIntoView({behavior:'smooth'}), 100);
             };
 
             const handleImageInsert = (url) => setNewReply(prev => prev + `\n![Image](${url})\n`);
-            const deleteReply = async (id) => { if(confirm("Delete?")) { const b = db.batch(); b.delete(db.collection('replies').doc(id)); b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); await b.commit(); }};
+            
+            // CASCADING DELETE (Manual Topic Deletion Handler)
+            const deleteReply = async (id) => { 
+                if(confirm("Delete?")) { 
+                    const b = db.batch(); 
+                    b.delete(db.collection('replies').doc(id)); 
+                    b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); 
+                    await b.commit(); 
+                }
+            };
 
             return (
                 <div className="max-w-4xl mx-auto p-4 h-screen flex flex-col fade-in">
@@ -631,7 +658,22 @@
             });
 
             const goToProfile = (e, uid) => { e.stopPropagation(); setViewUserId(uid); onViewChange('profile'); };
-            const deleteTopic = async (e, id) => { e.stopPropagation(); if(confirm("Delete?")) await db.collection('topics').doc(id).delete(); };
+            
+            // NEW: Cascading Delete for Topics
+            const deleteTopic = async (e, topic) => { 
+                e.stopPropagation(); 
+                if(confirm("Delete topic and ALL replies?")) {
+                    const batch = db.batch();
+                    batch.delete(db.collection('topics').doc(topic.id));
+                    
+                    // Get all replies for this topic
+                    const replySnap = await db.collection('replies').where('topicId', '==', topic.id).get();
+                    replySnap.forEach(r => batch.delete(r.ref));
+                    
+                    await batch.commit();
+                }
+            };
+            
             const togglePin = async (e, topic) => { e.stopPropagation(); await db.collection('topics').doc(topic.id).update({ isPinned: !topic.isPinned }); };
 
             return (
@@ -657,7 +699,7 @@
                                     </div>
                                     <div className="flex gap-2">
                                         {isAdmin && <button onClick={(e)=>togglePin(e,topic)} className={`text-xs p-2 rounded ${topic.isPinned ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400'}`}><i className="fa-solid fa-thumbtack"></i></button>}
-                                        {(isAdmin || user?.uid === topic.authorId) && <button onClick={(e)=>deleteTopic(e,topic.id)} className="text-slate-500 hover:text-red-400"><i className="fa-solid fa-trash"></i></button>}
+                                        {(isAdmin || user?.uid === topic.authorId) && <button onClick={(e)=>deleteTopic(e,topic)} className="text-slate-500 hover:text-red-400"><i className="fa-solid fa-trash"></i></button>}
                                     </div>
                                 </div>
                                 <div className="text-slate-400 text-sm line-clamp-2 mt-1"><RichText content={topic.preview||""}/></div>
