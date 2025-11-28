@@ -48,7 +48,7 @@
     <div id="root"></div>
     <script type="text/babel">
         // ==========================================
-        const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
+      const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
           authDomain: "babaforum-500b9.firebaseapp.com",
@@ -101,6 +101,20 @@
             });
         };
 
+        // --- COMPONENTS ---
+
+        function SetupScreen() {
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+                    <div className="glass-panel p-8 rounded-2xl text-center fade-in">
+                        <h1 className="text-2xl font-bold text-white mb-2">Setup Required</h1>
+                        <p className="text-slate-400 mb-6">Please add your Firebase Keys to index.html</p>
+                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-6 py-2 rounded-lg">Refresh</button>
+                    </div>
+                </div>
+            );
+        }
+
         const ensureUserProfile = async (user) => {
             if(!user || !db) return;
             const userRef = db.collection('users').doc(user.uid);
@@ -117,7 +131,6 @@
             }
         };
 
-        // --- LIGHTBOX COMPONENT ---
         function Lightbox({ src, onClose }) {
             return (
                 <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 cursor-pointer" onClick={onClose}>
@@ -127,42 +140,26 @@
             );
         }
 
-        // --- RICH TEXT WITH ZOOM ---
         function RichText({ content }) {
             const [zoomImg, setZoomImg] = useState(null);
-
-            const handleClick = (e) => {
-                if (e.target.tagName === 'IMG') {
-                    setZoomImg(e.target.src);
-                }
-            };
-
+            const handleClick = (e) => { if (e.target.tagName === 'IMG') setZoomImg(e.target.src); };
             const getMarkdownText = () => {
                 if (!window.marked) return { __html: content };
                 const safeText = content.replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
                 return { __html: marked.parse(safeText) };
             };
-
             return (
                 <>
-                    <div className="prose text-slate-300 text-sm leading-relaxed" 
-                         dangerouslySetInnerHTML={getMarkdownText()} 
-                         onClick={handleClick}
-                    />
+                    <div className="prose text-slate-300 text-sm leading-relaxed" dangerouslySetInnerHTML={getMarkdownText()} onClick={handleClick} />
                     {zoomImg && <Lightbox src={zoomImg} onClose={() => setZoomImg(null)} />}
                 </>
             );
         }
 
-        // --- LIKE BUTTON ---
         function LikeButton({ user, docId, collection, likes, likedBy, authorId }) {
             const [isLiked, setIsLiked] = useState(false);
             const [count, setCount] = useState(likes || 0);
-            
-            useEffect(() => { 
-                if (user && likedBy?.includes(user.uid)) setIsLiked(true); 
-            }, [user, likedBy]);
-
+            useEffect(() => { if (user && likedBy?.includes(user.uid)) setIsLiked(true); }, [user, likedBy]);
             const handleLike = async (e) => {
                 e.stopPropagation();
                 if (!user) return alert("Please sign in to vote!");
@@ -170,47 +167,24 @@
                 const newStatus = !isLiked;
                 setIsLiked(newStatus);
                 setCount(prev => newStatus ? prev + 1 : prev - 1);
-                
                 try {
                     const batch = db.batch();
                     batch.update(docRef, {
                         likes: firebase.firestore.FieldValue.increment(newStatus ? 1 : -1),
                         likedBy: newStatus ? firebase.firestore.FieldValue.arrayUnion(user.uid) : firebase.firestore.FieldValue.arrayRemove(user.uid)
                     });
-                    
                     if (newStatus && authorId && authorId !== user.uid) {
                         batch.set(db.collection('notifications').doc(), {
-                            toUserId: authorId, 
-                            fromName: user.displayName, 
-                            message: "liked your post", 
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
-                            read: false
+                            toUserId: authorId, fromName: user.displayName, message: "liked your post", createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false
                         });
                     }
                     await batch.commit();
-                } catch (error) { 
-                    setIsLiked(!newStatus); 
-                    setCount(prev => newStatus ? prev - 1 : prev + 1); 
-                }
+                } catch (error) { setIsLiked(!newStatus); setCount(prev => newStatus ? prev - 1 : prev + 1); }
             };
-
             return (
                 <button onClick={handleLike} className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${isLiked ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:bg-slate-700'}`}>
-                    <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart`}></i>
-                    <span className="text-xs font-bold">{count > 0 ? count : ''}</span>
+                    <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart`}></i><span className="text-xs font-bold">{count > 0 ? count : ''}</span>
                 </button>
-            );
-        }
-
-        function SetupScreen() {
-            return (
-                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-                    <div className="glass-panel p-8 rounded-2xl text-center fade-in">
-                        <h1 className="text-2xl font-bold text-white mb-2">Setup Required</h1>
-                        <p className="text-slate-400 mb-6">Please add your Firebase Keys to index.html</p>
-                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-6 py-2 rounded-lg">Refresh</button>
-                    </div>
-                </div>
             );
         }
 
@@ -220,14 +194,7 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 setUploading(true);
-                try {
-                    const base64String = await compressImage(file);
-                    onUpload(base64String);
-                } catch (error) {
-                    alert("Upload failed: " + error.message);
-                } finally {
-                    setUploading(false);
-                }
+                try { const b64 = await compressImage(file); onUpload(b64); } catch (e) { alert(e.message); } finally { setUploading(false); }
             };
             return (
                 <label className="cursor-pointer text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm">
@@ -245,24 +212,16 @@
                     .onSnapshot(snap => setNotes(snap.docs.map(d => ({id: d.id, ...d.data()}))));
                 return () => unsub();
             }, [user]);
-
-            const markRead = (id) => {
-                db.collection('notifications').doc(id).update({ read: true });
-            };
-
+            const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
             return (
                 <div className="absolute top-16 right-4 w-80 glass-panel rounded-xl shadow-2xl overflow-hidden z-50 border border-slate-600">
-                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-                        <h3 className="font-bold text-white text-sm">Notifications</h3>
-                        <button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button>
-                    </div>
+                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center"><h3 className="font-bold text-white text-sm">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
                     <div className="max-h-80 overflow-y-auto">
-                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications yet.</div>}
+                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications.</div>}
                         {notes.map(n => (
                             <div key={n.id} onClick={() => markRead(n.id)} className={`p-3 border-b border-slate-700/50 text-sm cursor-pointer hover:bg-slate-700 ${n.read ? 'opacity-50' : 'bg-indigo-500/10'}`}>
                                 <div className="font-bold text-indigo-300">{n.fromName}</div>
                                 <div className="text-slate-300">{n.message}</div>
-                                <div className="text-xs text-slate-500 mt-1">{new Date(n.createdAt?.seconds * 1000).toLocaleTimeString()}</div>
                             </div>
                         ))}
                     </div>
@@ -274,25 +233,16 @@
             const [showNotes, setShowNotes] = useState(false);
             const [unreadCount, setUnreadCount] = useState(0);
             const isAdmin = user && user.uid === ADMIN_UID;
-
             useEffect(() => {
                 if(!user) return;
-                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).where('read', '==', false)
-                    .onSnapshot(snap => setUnreadCount(snap.size));
+                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).where('read', '==', false).onSnapshot(snap => setUnreadCount(snap.size));
                 return () => unsub();
             }, [user]);
-
-            const handleLogin = () => {
-                if (!auth) return alert("Config Error");
-                auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
-            };
-
+            const handleLogin = () => { if (!auth) return alert("Config Error"); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); };
             return (
                 <nav className="glass-panel sticky top-0 z-50 border-b border-slate-700/50">
                     <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('home')}>
-                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">BabaForum</span>
-                        </div>
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('home')}><span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">BabaForum</span></div>
                         <div className="flex items-center gap-4">
                             {user ? (
                                 <>
@@ -304,14 +254,10 @@
                                         </button>
                                         {showNotes && <Notifications user={user} onClose={() => setShowNotes(false)} />}
                                     </div>
-                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-8 h-8 rounded-full overflow-hidden border border-slate-600">
-                                        <img src={user.photoURL} />
-                                    </button>
+                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-8 h-8 rounded-full overflow-hidden border border-slate-600"><img src={user.photoURL} /></button>
                                     <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-white"><i className="fa-solid fa-right-from-bracket"></i></button>
                                 </>
-                            ) : (
-                                <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium text-sm">Sign In</button>
-                            )}
+                            ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium text-sm">Sign In</button>}
                         </div>
                     </div>
                 </nav>
@@ -322,7 +268,6 @@
             const [stats, setStats] = useState({ topics: 0, replies: 0 });
             const [loading, setLoading] = useState(true);
             const [cleaning, setCleaning] = useState(false);
-
             useEffect(() => {
                 const fetchStats = async () => {
                     const t = await db.collection('topics').get();
@@ -332,57 +277,39 @@
                 };
                 fetchStats();
             }, []);
-
             const runCleanup = async () => {
-                if(!confirm("Are you sure? This deletes posts older than 365 days.")) return;
+                if(!confirm("Delete topics > 1 year old?")) return;
                 setCleaning(true);
                 try {
-                    const oneYearAgo = new Date();
-                    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                    const snapshot = await db.collection('topics').where('createdAt', '<', oneYearAgo).limit(50).get();
-                    
+                    const date = new Date(); date.setFullYear(date.getFullYear()-1);
+                    const snap = await db.collection('topics').where('createdAt', '<', date).limit(50).get();
                     const batch = db.batch();
-                    for (const doc of snapshot.docs) {
-                        batch.delete(doc.ref);
-                        const replies = await db.collection('replies').where('topicId', '==', doc.id).get();
-                        replies.forEach(r => batch.delete(r.ref));
+                    for(const d of snap.docs) {
+                        batch.delete(d.ref);
+                        const rs = await db.collection('replies').where('topicId','==',d.id).get();
+                        rs.forEach(r => batch.delete(r.ref));
                     }
                     await batch.commit();
-                    alert(`Deleted ${snapshot.size} old topics and their replies.`);
-                    const t = await db.collection('topics').get();
-                    const r = await db.collection('replies').get();
-                    setStats({ topics: t.size, replies: r.size });
-                } catch (err) { alert("Error: " + err.message); }
+                    alert(`Pruned ${snap.size} topics.`);
+                } catch(e) { alert(e.message); }
                 setCleaning(false);
             };
-
             const cleanOrphans = async () => {
-                if(!confirm("This will find and delete 'Ghost Replies' (replies to deleted topics).")) return;
+                if(!confirm("Clean ghost replies?")) return;
                 setCleaning(true);
                 try {
                     const topicsSnap = await db.collection('topics').get();
                     const topicIds = new Set(topicsSnap.docs.map(d => d.id));
                     const repliesSnap = await db.collection('replies').get();
                     const batch = db.batch();
-                    let deleteCount = 0;
-                    repliesSnap.forEach(doc => {
-                        const data = doc.data();
-                        if (!data.topicId || !topicIds.has(data.topicId)) {
-                            batch.delete(doc.ref);
-                            deleteCount++;
-                        }
-                    });
-                    if (deleteCount > 0) {
-                        await batch.commit();
-                        alert(`Success! Removed ${deleteCount} ghost replies.`);
-                        setStats(prev => ({...prev, replies: prev.replies - deleteCount}));
-                    } else {
-                        alert("Database is clean!");
-                    }
-                } catch (e) { alert(e.message); }
+                    let count = 0;
+                    repliesSnap.forEach(doc => { if (!doc.data().topicId || !topicIds.has(doc.data().topicId)) { batch.delete(doc.ref); count++; } });
+                    if(count>0) await batch.commit();
+                    alert(`Cleaned ${count} ghosts.`);
+                    setStats(prev => ({...prev, replies: prev.replies - count}));
+                } catch(e) { alert(e.message); }
                 setCleaning(false);
             };
-
             return (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
                     <div className="glass-panel p-8 rounded-2xl max-w-md w-full relative">
@@ -432,16 +359,7 @@
             });
 
             const goToProfile = (e, uid) => { e.stopPropagation(); setViewUserId(uid); onViewChange('profile'); };
-            const deleteTopic = async (e, t) => { 
-                e.stopPropagation(); 
-                if(confirm("Delete topic + replies?")) { 
-                    const b = db.batch(); 
-                    b.delete(db.collection('topics').doc(t.id)); 
-                    const rs = await db.collection('replies').where('topicId','==',t.id).get(); 
-                    rs.forEach(r => b.delete(r.ref)); 
-                    await b.commit(); 
-                }
-            };
+            const deleteTopic = async (e, t) => { e.stopPropagation(); if(confirm("Delete topic + replies?")) { const b = db.batch(); b.delete(db.collection('topics').doc(t.id)); const rs = await db.collection('replies').where('topicId','==',t.id).get(); rs.forEach(r => b.delete(r.ref)); await b.commit(); }};
             const togglePin = async (e, topic) => { e.stopPropagation(); await db.collection('topics').doc(topic.id).update({ isPinned: !topic.isPinned }); };
 
             return (
@@ -503,16 +421,19 @@
                 const cleanContent = form.content.replace(/!\[Image\]\(.*?\)/g, '[Image] ');
                 const previewText = cleanContent.substring(0, 100) + '...';
 
+                // FETCH REAL NAME FROM DB
                 const userRef = db.collection('users').doc(user.uid);
                 const userDoc = await userRef.get();
-                const currentCount = (userDoc.data()?.postCount || 0) + 1;
+                const userData = userDoc.data();
+                const realName = userData.displayName || user.displayName;
+                const currentCount = (userData.postCount || 0) + 1;
                 await userRef.update({ postCount: currentCount });
                 
                 await db.collection('topics').add({
                     ...form, 
                     preview: previewText, 
                     topicImage: topicImage, 
-                    authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, authorRank: getRank(currentCount).label,
+                    authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: getRank(currentCount).label,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(), replyCount: 0, likes: 0, likedBy: [], isPinned: false
                 });
                 setSubmitting(false);
@@ -544,13 +465,22 @@
             const postReply = async (e) => {
                 e.preventDefault(); if(!newReply.trim()) return;
                 const batch = db.batch();
-                const uRef = db.collection('users').doc(user.uid);
-                const uDoc = await uRef.get();
-                const cnt = (uDoc.data()?.postCount||0)+1;
-                batch.update(uRef,{postCount:cnt});
-                batch.set(db.collection('replies').doc(), { content: newReply, topicId: topic.id, authorId: user.uid, authorName: user.displayName, authorPhoto: user.photoURL, authorRank: getRank(cnt).label, createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] });
+                
+                // FETCH REAL NAME
+                const userRef = db.collection('users').doc(user.uid);
+                const userDoc = await userRef.get();
+                const userData = userDoc.data();
+                const realName = userData.displayName || user.displayName;
+                const currentCount = (userData.postCount || 0) + 1;
+                batch.update(userRef, { postCount: currentCount });
+                const rank = getRank(currentCount);
+
+                batch.set(db.collection('replies').doc(), { 
+                    content: newReply, topicId: topic.id, authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: rank.label,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(), likes: 0, likedBy: [] 
+                });
                 batch.update(db.collection('topics').doc(topic.id), { replyCount: firebase.firestore.FieldValue.increment(1) });
-                if(topic.authorId!==user.uid) batch.set(db.collection('notifications').doc(), { toUserId: topic.authorId, fromName: user.displayName, message: "replied to your topic", createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false });
+                if(topic.authorId!==user.uid) batch.set(db.collection('notifications').doc(), { toUserId: topic.authorId, fromName: realName, message: "replied to your topic", createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false });
                 await batch.commit(); setNewReply(''); setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:'smooth'}),100);
             };
             const handleImageInsert = (url) => setNewReply(p => p + `\n![Image](${url})\n`);
