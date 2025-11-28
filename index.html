@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BabaForum</title>
     
-    <!-- ERROR HANDLER -->
     <script>
         window.onerror = function(msg, url, line) {
             if (msg.includes("ResizeObserver")) return;
-            document.body.innerHTML = '<div style="color:red; padding:20px; background:black; font-family:monospace; z-index:10000; position:fixed; top:0; left:0; width:100%;"><h1>Error Detected</h1><p>'+msg+'</p><p>Line: '+line+'</p></div>';
+            document.body.innerHTML = '<div style="color:red; padding:20px; background:black; font-family:monospace; z-index:9999; position:fixed; top:0; width:100%;"><h1>Error Detected</h1><p>'+msg+'</p><p>Line: '+line+'</p></div>';
         };
     </script>
 
-    <!-- LIBRARIES -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -24,7 +22,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- STYLES -->
     <style>
         body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
@@ -51,7 +48,7 @@
     <div id="root"></div>
     <script type="text/babel">
         // ==========================================
-      const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
+        const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
           authDomain: "babaforum-500b9.firebaseapp.com",
@@ -74,7 +71,7 @@
 
         const { useState, useEffect, useRef } = React;
 
-        // --- 1. HELPERS (Must be first) ---
+        // --- 1. HELPERS ---
         const getRank = (count) => {
             if (count >= 100) return { label: "Legend", class: "badge-legend" };
             if (count >= 50) return { label: "Regular", class: "badge-regular" };
@@ -121,7 +118,8 @@
             }
         };
 
-        // --- 2. BASIC UI COMPONENTS (Must be before Views) ---
+        // --- 2. BASIC UI COMPONENTS (Must be defined first) ---
+
         function SetupScreen() {
             return (
                 <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
@@ -140,6 +138,82 @@
                     <img src={src} className="max-w-full max-h-full rounded-lg shadow-2xl cursor-default" onClick={e => e.stopPropagation()} />
                     <button className="absolute top-4 right-4 text-white text-3xl hover:text-red-500 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
                 </div>
+            );
+        }
+
+        function ImageUpload({ onUpload }) {
+            const [uploading, setUploading] = useState(false);
+            const handleFile = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setUploading(true);
+                try { const b64 = await compressImage(file); onUpload(b64); } catch (e) { alert(e.message); } finally { setUploading(false); }
+            };
+            return (
+                <label className="cursor-pointer text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm">
+                    <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+                    {uploading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-regular fa-image"></i>}
+                    {uploading ? "Processing..." : "Add Image"}
+                </label>
+            );
+        }
+
+        function Notifications({ user, onClose }) {
+            const [notes, setNotes] = useState([]);
+            useEffect(() => {
+                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).orderBy('createdAt', 'desc').limit(20)
+                    .onSnapshot(snap => setNotes(snap.docs.map(d => ({id: d.id, ...d.data()}))));
+                return () => unsub();
+            }, [user]);
+            const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
+            return (
+                <div className="absolute top-16 right-4 w-80 glass-panel rounded-xl shadow-2xl overflow-hidden z-50 border border-slate-600">
+                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center"><h3 className="font-bold text-white text-sm">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
+                    <div className="max-h-80 overflow-y-auto">
+                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications.</div>}
+                        {notes.map(n => (
+                            <div key={n.id} onClick={() => markRead(n.id)} className={`p-3 border-b border-slate-700/50 text-sm cursor-pointer hover:bg-slate-700 ${n.read ? 'opacity-50' : 'bg-indigo-500/10'}`}>
+                                <div className="font-bold text-indigo-300">{n.fromName}</div>
+                                <div className="text-slate-300">{n.message}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId }) {
+            const [showNotes, setShowNotes] = useState(false);
+            const [unreadCount, setUnreadCount] = useState(0);
+            const isAdmin = user && user.uid === ADMIN_UID;
+            useEffect(() => {
+                if(!user) return;
+                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).where('read', '==', false).onSnapshot(snap => setUnreadCount(snap.size));
+                return () => unsub();
+            }, [user]);
+            const handleLogin = () => { if (!auth) return alert("Config Error"); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); };
+            return (
+                <nav className="glass-panel sticky top-0 z-50 border-b border-slate-700/50">
+                    <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewChange('home')}><span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">BabaForum</span></div>
+                        <div className="flex items-center gap-4">
+                            {user ? (
+                                <>
+                                    {isAdmin && <button onClick={onOpenAdmin} className="text-amber-400"><i className="fa-solid fa-lock"></i></button>}
+                                    <div className="relative">
+                                        <button onClick={() => setShowNotes(!showNotes)} className="text-slate-400 hover:text-white relative p-2">
+                                            <i className="fa-regular fa-bell text-lg"></i>
+                                            {unreadCount > 0 && <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{unreadCount}</span>}
+                                        </button>
+                                        {showNotes && <Notifications user={user} onClose={() => setShowNotes(false)} />}
+                                    </div>
+                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-8 h-8 rounded-full overflow-hidden border border-slate-600"><img src={user.photoURL} /></button>
+                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-white"><i className="fa-solid fa-right-from-bracket"></i></button>
+                                </>
+                            ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2 rounded-lg font-medium text-sm">Sign In</button>}
+                        </div>
+                    </div>
+                </nav>
             );
         }
 
@@ -188,47 +262,6 @@
                 <button onClick={handleLike} className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${isLiked ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:bg-slate-700'}`}>
                     <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart`}></i><span className="text-xs font-bold">{count > 0 ? count : ''}</span>
                 </button>
-            );
-        }
-
-        function ImageUpload({ onUpload }) {
-            const [uploading, setUploading] = useState(false);
-            const handleFile = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                setUploading(true);
-                try { const b64 = await compressImage(file); onUpload(b64); } catch (e) { alert(e.message); } finally { setUploading(false); }
-            };
-            return (
-                <label className="cursor-pointer text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
-                    {uploading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-regular fa-image"></i>}
-                    {uploading ? "Processing..." : "Add Image"}
-                </label>
-            );
-        }
-
-        function Notifications({ user, onClose }) {
-            const [notes, setNotes] = useState([]);
-            useEffect(() => {
-                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).orderBy('createdAt', 'desc').limit(20)
-                    .onSnapshot(snap => setNotes(snap.docs.map(d => ({id: d.id, ...d.data()}))));
-                return () => unsub();
-            }, [user]);
-            const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
-            return (
-                <div className="absolute top-16 right-4 w-80 glass-panel rounded-xl shadow-2xl overflow-hidden z-50 border border-slate-600">
-                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center"><h3 className="font-bold text-white text-sm">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
-                    <div className="max-h-80 overflow-y-auto">
-                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications.</div>}
-                        {notes.map(n => (
-                            <div key={n.id} onClick={() => markRead(n.id)} className={`p-3 border-b border-slate-700/50 text-sm cursor-pointer hover:bg-slate-700 ${n.read ? 'opacity-50' : 'bg-indigo-500/10'}`}>
-                                <div className="font-bold text-indigo-300">{n.fromName}</div>
-                                <div className="text-slate-300">{n.message}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
             );
         }
 
@@ -301,7 +334,7 @@
             );
         }
 
-        // --- 3. PAGE VIEW COMPONENTS (Must be after UI/Helpers) ---
+        // --- 3. VIEWS (Defined last) ---
 
         function ProfileView({ viewUserId, currentUser, onViewChange }) {
             const [profile, setProfile] = useState(null);
@@ -410,12 +443,14 @@
                 const topicImage = imgMatch ? imgMatch[1] : null;
                 const cleanContent = form.content.replace(/!\[Image\]\(.*?\)/g, '[Image] ');
                 const previewText = cleanContent.substring(0, 100) + '...';
+                
                 const userRef = db.collection('users').doc(user.uid);
                 const userDoc = await userRef.get();
                 const userData = userDoc.data();
                 const realName = userData.displayName || user.displayName;
                 const currentCount = (userData.postCount || 0) + 1;
                 await userRef.update({ postCount: currentCount });
+                
                 await db.collection('topics').add({
                     ...form, 
                     preview: previewText, 
@@ -527,7 +562,6 @@
             );
         }
 
-        // --- 4. APP (Last) ---
         function App() {
             const [view, setView] = useState('home');
             const [user, setUser] = useState(null);
