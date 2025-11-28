@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BabaForum</title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
+    <!-- PWA MANIFEST: This controls the App Icon & Name -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1253/1253838.png","sizes":"512x512","type":"image/png"}]}'>
+    
+    <!-- iOS SUPPORT -->
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1253/1253838.png">
 
-    <!-- Error Handler -->
+    <!-- ERROR HANDLER -->
     <script>
         window.onerror = function(msg, url, line) {
             if (msg.includes("ResizeObserver")) return;
@@ -18,7 +22,7 @@
         };
     </script>
 
-    <!-- Libraries -->
+    <!-- LIBRARIES -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -120,15 +124,15 @@
             }
         };
 
-        // --- 2. UI COMPONENTS (Defined BEFORE usage) ---
+        // --- 2. UI COMPONENTS ---
 
         function SetupScreen() {
             return (
-                <div className="min-h-screen flex items-center justify-center p-4">
-                    <div className="glass-panel p-10 rounded-3xl text-center fade-in max-w-md">
-                        <h1 className="text-3xl font-extrabold text-white mb-3">Setup Required</h1>
-                        <p className="text-slate-400 mb-8">Please configure Firebase keys.</p>
-                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-8 py-3 rounded-xl font-bold">Refresh</button>
+                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+                    <div className="glass-panel p-8 rounded-2xl text-center fade-in">
+                        <h1 className="text-2xl font-bold text-white mb-2">Setup Required</h1>
+                        <p className="text-slate-400 mb-6">Please add your Firebase Keys to index.html</p>
+                        <button onClick={() => window.location.reload()} className="btn-primary text-white px-6 py-2 rounded-lg">Refresh</button>
                     </div>
                 </div>
             );
@@ -138,7 +142,7 @@
             return (
                 <div className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 cursor-pointer fade-in" onClick={onClose}>
                     <img src={src} className="max-w-full max-h-full rounded-2xl shadow-2xl cursor-default" onClick={e => e.stopPropagation()} />
-                    <button className="absolute top-6 right-6 text-white/70 text-4xl"><i className="fa-solid fa-xmark"></i></button>
+                    <button className="absolute top-4 right-4 text-white text-3xl hover:text-red-500 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
                 </div>
             );
         }
@@ -153,7 +157,7 @@
             };
             return (
                 <>
-                    <div className="prose text-slate-300 text-[15px] leading-7" dangerouslySetInnerHTML={getMarkdownText()} onClick={handleClick} />
+                    <div className="prose text-slate-300 text-sm leading-relaxed" dangerouslySetInnerHTML={getMarkdownText()} onClick={handleClick} />
                     {zoomImg && <Lightbox src={zoomImg} onClose={() => setZoomImg(null)} />}
                 </>
             );
@@ -185,8 +189,8 @@
                 } catch (error) { setIsLiked(!newStatus); setCount(prev => newStatus ? prev - 1 : prev + 1); }
             };
             return (
-                <button onClick={handleLike} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${isLiked ? 'text-pink-400 bg-pink-500/20' : 'text-slate-500 hover:bg-slate-800'}`}>
-                    <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart text-sm`}></i><span className="text-xs font-bold">{count > 0 ? count : ''}</span>
+                <button onClick={handleLike} className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${isLiked ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:bg-slate-700'}`}>
+                    <i className={`${isLiked ? 'fa-solid' : 'fa-regular'} fa-heart`}></i><span className="text-xs font-bold">{count > 0 ? count : ''}</span>
                 </button>
             );
         }
@@ -205,18 +209,6 @@
                     {uploading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-regular fa-image text-lg"></i>}
                     {uploading ? "Processing..." : "Add Image"}
                 </label>
-            );
-        }
-
-        function InstallButton() {
-            const [deferredPrompt, setDeferredPrompt] = useState(null);
-            useEffect(() => { window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); }); }, []);
-            const handleInstall = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') setDeferredPrompt(null); };
-            if (!deferredPrompt) return null;
-            return (
-                <button onClick={handleInstall} className="text-slate-400 hover:text-indigo-400 p-2 relative group">
-                    <i className="fa-solid fa-download text-xl"></i>
-                </button>
             );
         }
 
@@ -247,21 +239,71 @@
             );
         }
 
-        // --- 3. MAIN COMPONENTS (Defined BEFORE App) ---
+        // --- 3. INSTALL BUTTON ---
+        function InstallButton() {
+            const [deferredPrompt, setDeferredPrompt] = useState(null);
+            const [isIOS, setIsIOS] = useState(false);
+            const [showIOSHelp, setShowIOSHelp] = useState(false);
+
+            useEffect(() => {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    setDeferredPrompt(e);
+                });
+                // Detect iOS
+                const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                if(isIosDevice && !window.navigator.standalone) {
+                    setIsIOS(true);
+                }
+            }, []);
+
+            const handleInstall = async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') setDeferredPrompt(null);
+                } else if (isIOS) {
+                    setShowIOSHelp(true);
+                } else {
+                    alert("To install: Tap your browser's Menu button (⋮) and select 'Add to Home Screen'.");
+                }
+            };
+
+            return (
+                <>
+                    <button onClick={handleInstall} className="text-slate-400 hover:text-indigo-400 p-2 relative group">
+                        <i className="fa-solid fa-download text-xl"></i>
+                    </button>
+                    {showIOSHelp && (
+                        <div className="fixed inset-0 bg-black/90 z-[10000] flex items-center justify-center p-6" onClick={() => setShowIOSHelp(false)}>
+                            <div className="glass-panel p-6 rounded-2xl text-center max-w-sm" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-xl font-bold text-white mb-4">Install on iPhone</h3>
+                                <p className="text-slate-300 mb-4">1. Tap the <i className="fa-solid fa-arrow-up-from-bracket mx-1"></i> <strong>Share</strong> button in your browser bar.</p>
+                                <p className="text-slate-300 mb-6">2. Scroll down and tap <strong>Add to Home Screen</strong>.</p>
+                                <button onClick={() => setShowIOSHelp(false)} className="btn-primary w-full py-2 rounded-lg">Got it</button>
+                            </div>
+                        </div>
+                    )}
+                </>
+            );
+        }
 
         function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId }) {
             const [showNotes, setShowNotes] = useState(false);
             const [unreadCount, setUnreadCount] = useState(0);
             const isAdmin = user && user.uid === ADMIN_UID;
+
             useEffect(() => {
                 if(!user) return;
                 const unsub = db.collection('notifications').where('toUserId', '==', user.uid).where('read', '==', false).onSnapshot(snap => setUnreadCount(snap.size));
                 return () => unsub();
             }, [user]);
+
             const handleLogin = () => { if (!auth) return alert("Config Error"); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); };
+
             return (
                 <nav className="glass-panel sticky top-0 z-50 border-b-0 shadow-sm backdrop-blur-xl">
-                    <div className="max-w-5xl mx-auto px-4 h-20 flex items-center justify-between">
+                    <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
                         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onViewChange('home')}>
                             <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tight">BabaForum</span>
                         </div>
@@ -269,16 +311,16 @@
                             <InstallButton />
                             {user ? (
                                 <>
-                                    {isAdmin && <button onClick={onOpenAdmin} className="text-amber-400 bg-amber-500/10 p-2 rounded-lg"><i className="fa-solid fa-shield-halved"></i></button>}
+                                    {isAdmin && <button onClick={onOpenAdmin} className="text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 p-2 rounded-lg"><i className="fa-solid fa-shield-halved"></i></button>}
                                     <div className="relative">
-                                        <button onClick={() => setShowNotes(!showNotes)} className="text-slate-400 hover:text-white relative p-2">
+                                        <button onClick={() => setShowNotes(!showNotes)} className="text-slate-400 hover:text-white relative p-2 transition-colors">
                                             <i className="fa-regular fa-bell text-xl"></i>
                                             {unreadCount > 0 && <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-900">{unreadCount}</span>}
                                         </button>
                                         {showNotes && <Notifications user={user} onClose={() => setShowNotes(false)} />}
                                     </div>
-                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-700/50"><img src={user.photoURL} className="w-full h-full object-cover"/></button>
-                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-red-400 p-2"><i className="fa-solid fa-right-from-bracket text-lg"></i></button>
+                                    <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-700/50 hover:border-indigo-500 transition-all ring-2 ring-transparent hover:ring-indigo-500/30 shadow-md"><img src={user.photoURL} className="w-full h-full object-cover"/></button>
+                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-red-400 p-2 transition-colors"><i className="fa-solid fa-right-from-bracket text-lg"></i></button>
                                 </>
                             ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg">Sign In</button>}
                         </div>
@@ -342,10 +384,11 @@
                         {loading ? <p className="text-slate-400">Loading...</p> : (
                             <div className="space-y-8">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-900/50 p-6 rounded-2xl text-center border border-white/5"><div className="text-4xl font-extrabold text-white mb-1">{stats.topics}</div><div className="text-xs text-slate-400 font-bold uppercase">Topics</div></div>
-                                    <div className="bg-slate-900/50 p-6 rounded-2xl text-center border border-white/5"><div className="text-4xl font-extrabold text-white mb-1">{stats.replies}</div><div className="text-xs text-slate-400 font-bold uppercase">Replies</div></div>
+                                    <div className="bg-slate-900/50 p-6 rounded-2xl text-center border border-white/5"><div className="text-4xl font-extrabold text-white mb-1">{stats.topics}</div><div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Topics</div></div>
+                                    <div className="bg-slate-900/50 p-6 rounded-2xl text-center border border-white/5"><div className="text-4xl font-extrabold text-white mb-1">{stats.replies}</div><div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Replies</div></div>
                                 </div>
                                 <div className="border-t border-white/10 pt-8 space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Database Maintenance</h3>
                                     <button onClick={recountUserPosts} disabled={cleaning} className="w-full btn-primary py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg">{cleaning?<i className="fa-solid fa-spinner fa-spin"></i>:<i className="fa-solid fa-rotate"></i>} Fix User Counts</button>
                                     <button onClick={runCleanup} disabled={cleaning} className="w-full btn-danger py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2">{cleaning?<i className="fa-solid fa-spinner fa-spin"></i>:<i className="fa-solid fa-calendar-xmark"></i>} Prune Old Topics</button>
                                 </div>
@@ -355,6 +398,8 @@
                 </div>
             );
         }
+
+        // --- 4. PAGE VIEWS ---
 
         function ProfileView({ viewUserId, currentUser, onViewChange, setCurrentTopic }) {
             const [profile, setProfile] = useState(null);
@@ -519,12 +564,14 @@
                 const topicImage = imgMatch ? imgMatch[1] : null;
                 const cleanContent = form.content.replace(/!\[Image\]\(.*?\)/g, '[Image] ');
                 const previewText = cleanContent.substring(0, 120) + '...';
+                
                 const userRef = db.collection('users').doc(user.uid);
                 const userDoc = await userRef.get();
                 const userData = userDoc.data();
                 const realName = userData.displayName || user.displayName;
                 const currentCount = (userData.postCount || 0) + 1;
                 await userRef.update({ postCount: currentCount });
+                
                 await db.collection('topics').add({
                     ...form, 
                     preview: previewText, 
@@ -646,7 +693,6 @@
             );
         }
 
-        // --- 4. APP (Must be last) ---
         function App() {
             const [view, setView] = useState('home');
             const [user, setUser] = useState(null);
