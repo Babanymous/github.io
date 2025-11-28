@@ -74,10 +74,11 @@
 
         // --- HELPERS ---
         const getRank = (count) => {
-            if (count >= 100) return { label: "Legend", class: "badge-legend" };
-            if (count >= 50) return { label: "Regular", class: "badge-regular" };
-            if (count >= 10) return { label: "Member", class: "badge-member" };
-            return { label: "Newcomer", class: "badge-new" };
+            const base = "text-[10px] px-2 py-0.5 rounded";
+            if (count >= 100) return { label: "Legend", class: `${base} badge-legend` };
+            if (count >= 50) return { label: "Regular", class: `${base} badge-regular` };
+            if (count >= 10) return { label: "Member", class: `${base} badge-member` };
+            return { label: "Newcomer", class: `${base} badge-new` };
         };
 
         const compressImage = (file) => {
@@ -117,6 +118,8 @@
                 });
             }
         };
+        
+        // --- COMPONENTS ---
 
         function SetupScreen() {
             return (
@@ -131,7 +134,7 @@
         }
 
         function Lightbox({ src, onClose }) {
-            // FIXED: Z-Index 9999 ensures it's above everything
+            // Z-Index 9999 ensures it's above everything
             return (
                 <div className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-4 cursor-pointer" onClick={onClose}>
                     <img src={src} className="max-w-full max-h-full rounded-lg shadow-2xl cursor-default" onClick={e => e.stopPropagation()} />
@@ -207,24 +210,18 @@
                 if(!confirm("Recalculate ALL user post counts? This might take a moment.")) return;
                 setCleaning(true);
                 try {
-                    // 1. Get all topics
                     const topicsSnap = await db.collection('topics').get();
                     const userCounts = {};
-                    
-                    // 2. Count topics per user
                     topicsSnap.forEach(doc => {
                         const uid = doc.data().authorId;
                         if(uid) userCounts[uid] = (userCounts[uid] || 0) + 1;
                     });
-
-                    // 3. Update all users
                     const usersSnap = await db.collection('users').get();
                     const batch = db.batch();
                     usersSnap.forEach(doc => {
                         const realCount = userCounts[doc.id] || 0;
                         batch.update(doc.ref, { postCount: realCount });
                     });
-                    
                     await batch.commit();
                     alert("Success! All user counts have been fixed.");
                 } catch(e) { alert(e.message); }
@@ -240,9 +237,10 @@
                     const batch = db.batch();
                     for(const d of snap.docs) {
                         batch.delete(d.ref);
-                        // Also decrement user count
                         const userRef = db.collection('users').doc(d.data().authorId);
                         batch.update(userRef, { postCount: firebase.firestore.FieldValue.increment(-1) });
+                        const rs = await db.collection('replies').where('topicId','==',d.id).get(); 
+                        rs.forEach(r => batch.delete(r.ref));
                     }
                     await batch.commit();
                     alert(`Pruned ${snap.size} topics.`);
@@ -267,115 +265,6 @@
                                 </div>
                             </div>
                         )}
-                    </div>
-                </div>
-            );
-        }
-
-        // --- PROFILE VIEW (FIXED CLICKABLE POSTS) ---
-        function ProfileView({ viewUserId, currentUser, onViewChange, setCurrentTopic }) {
-            const [profile, setProfile] = useState(null);
-            const [posts, setPosts] = useState([]);
-            const [isFollowing, setIsFollowing] = useState(false);
-            const [editing, setEditing] = useState(false);
-            const [newName, setNewName] = useState("");
-            const [newBio, setNewBio] = useState("");
-
-            useEffect(() => {
-                const load = async () => {
-                    if(!viewUserId) return;
-                    const d = await db.collection('users').doc(viewUserId).get();
-                    if(d.exists) {
-                        const data = d.data(); setProfile(data); setNewName(data.displayName); setNewBio(data.bio||"");
-                        if(currentUser) { const my = await db.collection('users').doc(currentUser.uid).get(); setIsFollowing(my.data().following?.includes(viewUserId)); }
-                    }
-                    try {
-                        const snap = await db.collection('topics').where('authorId','==',viewUserId).orderBy('createdAt','desc').limit(20).get();
-                        setPosts(snap.docs.map(d=>({id:d.id,...d.data()})));
-                    } catch(e) { if(e.message.includes("index")) console.warn("Missing Index"); }
-                };
-                if(db && viewUserId) load();
-            }, [viewUserId, currentUser]);
-
-            const toggleFollow = async () => {
-                if(!currentUser) return alert("Sign in!");
-                const my = db.collection('users').doc(currentUser.uid); const th = db.collection('users').doc(viewUserId); const b = db.batch();
-                if(isFollowing) { b.update(my,{following:firebase.firestore.FieldValue.arrayRemove(viewUserId)}); b.update(th,{followers:firebase.firestore.FieldValue.arrayRemove(currentUser.uid)}); }
-                else { b.update(my,{following:firebase.firestore.FieldValue.arrayUnion(viewUserId)}); b.update(th,{followers:firebase.firestore.FieldValue.arrayUnion(currentUser.uid)}); b.set(db.collection('notifications').doc(), {toUserId:viewUserId, fromName:currentUser.displayName, message:"followed you", createdAt:firebase.firestore.FieldValue.serverTimestamp(), read:false}); }
-                await b.commit(); setIsFollowing(!isFollowing); setProfile(p=>({...p, followers: isFollowing?p.followers.slice(0,-1):[...(p.followers||[]),currentUser.uid]}));
-            };
-            const save = async () => { await db.collection('users').doc(currentUser.uid).update({displayName:newName, bio:newBio}); setProfile(p=>({...p, displayName:newName, bio:newBio})); setEditing(false); };
-            
-            if(!profile) return <div className="text-center p-10 text-slate-500">Loading...</div>;
-            const isMe = currentUser && currentUser.uid === viewUserId;
-            const rank = getRank(profile.postCount || 0);
-
-            return (
-                <div className="max-w-4xl mx-auto p-4 fade-in">
-                    <button onClick={()=>onViewChange('home')} className="text-slate-400 mb-6 flex gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="glass-panel p-8 rounded-2xl mb-8 flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
-                        <img src={profile.photoURL} className="w-24 h-24 rounded-full border-4 border-indigo-500/30"/>
-                        <div className="flex-1">
-                            {editing ? (
-                                <div className="space-y-3"><input className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newName} onChange={e=>setNewName(e.target.value)}/><textarea className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white" value={newBio} onChange={e=>setNewBio(e.target.value)}/><button onClick={save} className="btn-primary px-4 py-1 rounded text-white text-sm">Save</button></div>
-                            ) : (
-                                <>
-                                    <div className="flex items-center justify-center md:justify-start gap-3"><h1 className="text-3xl font-bold text-white">{profile.displayName}</h1><span className={`text-xs px-2 py-1 rounded ${rank.class}`}>{rank.label}</span></div>
-                                    <p className="text-indigo-300 mt-1 mb-4">{profile.bio}</p>
-                                    <div className="flex gap-6 justify-center md:justify-start text-sm text-slate-400 mb-4"><span><strong>{profile.followers?.length||0}</strong> Followers</span><span><strong>{profile.following?.length||0}</strong> Following</span><span><strong>{profile.postCount||0}</strong> Posts</span></div>
-                                    {isMe ? <button onClick={()=>setEditing(true)} className="btn-outline px-4 py-2 rounded-lg text-sm">Edit</button> : <button onClick={toggleFollow} className={`px-6 py-2 rounded-lg font-medium ${isFollowing?'bg-slate-700 text-slate-300':'btn-primary text-white'}`}>{isFollowing?'Following':'Follow'}</button>}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        {posts.map(p => (
-                            <div key={p.id} onClick={() => { setCurrentTopic(p); onViewChange('thread'); }} className="glass-panel p-4 rounded-xl flex gap-4 cursor-pointer hover:bg-slate-800">
-                                <div className="w-16 h-16 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0">{p.topicImage ? <img src={p.topicImage} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-600"><i className="fa-regular fa-file-lines"></i></div>}</div>
-                                <div><h4 className="text-lg font-semibold text-slate-200">{p.title}</h4><div className="text-slate-500 text-xs">{new Date(p.createdAt?.seconds*1000).toLocaleDateString()}</div></div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        function ImageUpload({ onUpload }) {
-            const [uploading, setUploading] = useState(false);
-            const handleFile = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                setUploading(true);
-                try { const b64 = await compressImage(file); onUpload(b64); } catch (e) { alert(e.message); } finally { setUploading(false); }
-            };
-            return (
-                <label className="cursor-pointer text-slate-400 hover:text-indigo-400 flex items-center gap-2 text-sm">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
-                    {uploading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-regular fa-image"></i>}
-                    {uploading ? "Processing..." : "Add Image"}
-                </label>
-            );
-        }
-
-        function Notifications({ user, onClose }) {
-            const [notes, setNotes] = useState([]);
-            useEffect(() => {
-                const unsub = db.collection('notifications').where('toUserId', '==', user.uid).orderBy('createdAt', 'desc').limit(20)
-                    .onSnapshot(snap => setNotes(snap.docs.map(d => ({id: d.id, ...d.data()}))));
-                return () => unsub();
-            }, [user]);
-            const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
-            return (
-                <div className="absolute top-16 right-4 w-80 glass-panel rounded-xl shadow-2xl overflow-hidden z-50 border border-slate-600">
-                    <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center"><h3 className="font-bold text-white text-sm">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
-                    <div className="max-h-80 overflow-y-auto">
-                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No notifications.</div>}
-                        {notes.map(n => (
-                            <div key={n.id} onClick={() => markRead(n.id)} className={`p-3 border-b border-slate-700/50 text-sm cursor-pointer hover:bg-slate-700 ${n.read ? 'opacity-50' : 'bg-indigo-500/10'}`}>
-                                <div className="font-bold text-indigo-300">{n.fromName}</div>
-                                <div className="text-slate-300">{n.message}</div>
-                            </div>
-                        ))}
                     </div>
                 </div>
             );
@@ -429,6 +318,7 @@
                 if(db) {
                     const unsubscribe = db.collection('topics').orderBy('createdAt', 'desc').onSnapshot(snap => {
                         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        // FIXED: Use property access instead of passing entire object to sort
                         list.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.createdAt - a.createdAt);
                         setTopics(list); setLoading(false);
                     });
@@ -443,7 +333,6 @@
             });
 
             const goToProfile = (e, uid) => { e.stopPropagation(); setViewUserId(uid); onViewChange('profile'); };
-            // FIXED: Decrement user count on delete
             const deleteTopic = async (e, t) => { 
                 e.stopPropagation(); 
                 if(confirm("Delete topic?")) { 
@@ -487,7 +376,7 @@
                                 {topic.topicImage && (<div className="w-full h-48 bg-slate-900 rounded-lg my-3 overflow-hidden border border-slate-700"><img src={topic.topicImage} className="w-full h-full object-cover" alt="Preview"/></div>)}
                                 <div className="text-slate-400 text-sm line-clamp-2 mt-1"><RichText content={topic.preview||""}/></div>
                                 <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-                                    <span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{topic.authorRank || 'Member'}</span>
+                                    <span className={topic.authorRank.class}>{topic.authorRank.label}</span>
                                     <span onClick={(e)=>goToProfile(e, topic.authorId)} className="hover:text-indigo-400 cursor-pointer font-medium">{topic.authorName}</span>
                                     <div className="flex items-center gap-3 ml-auto">
                                         <LikeButton user={user} docId={topic.id} collection="topics" likes={topic.likes} likedBy={topic.likedBy} authorId={topic.authorId} />
@@ -523,7 +412,7 @@
                     ...form, 
                     preview: previewText, 
                     topicImage: topicImage, 
-                    authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: getRank(currentCount).label,
+                    authorId: user.uid, authorName: realName, authorPhoto: user.photoURL, authorRank: getRank(currentCount),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(), replyCount: 0, likes: 0, likedBy: [], isPinned: false
                 });
                 setSubmitting(false);
@@ -567,18 +456,30 @@
                 await batch.commit(); setNewReply(''); setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:'smooth'}),100);
             };
             const handleImageInsert = (url) => setNewReply(p => p + `\n![Image](${url})\n`);
-            const deleteReply = async (id) => { if(confirm("Delete?")) { const b = db.batch(); b.delete(db.collection('replies').doc(id)); b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); await b.commit(); }};
+            const deleteReply = async (id) => { 
+                if(confirm("Delete?")) { 
+                    const b = db.batch(); 
+                    b.delete(db.collection('replies').doc(id)); 
+                    b.update(db.collection('topics').doc(topic.id), {replyCount: firebase.firestore.FieldValue.increment(-1)}); 
+                    // Decrement user count for reply author
+                    const replyDoc = await db.collection('replies').doc(id).get();
+                    const authorId = replyDoc.data().authorId;
+                    b.update(db.collection('users').doc(authorId), { postCount: firebase.firestore.FieldValue.increment(-1) });
+                    await b.commit(); 
+                }
+            };
+
             return (
                 <div className="max-w-4xl mx-auto p-4 h-screen flex flex-col fade-in">
                     <button onClick={() => onViewChange('home')} className="text-slate-400 mb-4 w-fit"><i className="fa-solid fa-arrow-left"></i> Back</button>
                     <div className="flex-1 overflow-y-auto space-y-6 pr-2 pb-20">
                         <div className="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500">
-                            <div className="flex items-center gap-3 mb-4"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/><div><div className="font-medium text-white">{topic.authorName}</div><span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{topic.authorRank}</span></div></div>
+                            <div className="flex items-center gap-3 mb-4"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/><div><div className="font-medium text-white">{topic.authorName}</div><span className={topic.authorRank.class}>{topic.authorRank.label}</span></div></div>
                             <h1 className="text-2xl font-bold text-white mb-4">{topic.title}</h1>
                             <RichText content={topic.content} />
                         </div>
                         {replies.map(r => (
-                            <div key={r.id} className="glass-panel p-4 rounded-xl flex gap-4"><img src={r.authorPhoto} className="w-8 h-8 rounded-full cursor-pointer" onClick={()=>{setViewUserId(r.authorId);onViewChange('profile')}}/><div className="flex-1"><div className="flex justify-between mb-2"><div className="flex items-center gap-2"><span className="text-indigo-300 font-medium">{r.authorName}</span><span className={`text-[10px] px-2 py-0.5 rounded ${getRank(0).class}`}>{r.authorRank}</span></div><div className="flex gap-2">{(isAdmin||user?.uid===r.authorId)&&<button onClick={()=>deleteReply(r.id)} className="text-slate-600 hover:text-red-400"><i className="fa-solid fa-trash text-xs"></i></button>}</div></div><RichText content={r.content}/></div></div>
+                            <div key={r.id} className="glass-panel p-4 rounded-xl flex gap-4"><img src={r.authorPhoto} className="w-8 h-8 rounded-full cursor-pointer" onClick={()=>{setViewUserId(r.authorId);onViewChange('profile')}}/><div className="flex-1"><div className="flex justify-between mb-2"><div className="flex items-center gap-2"><span className="text-indigo-300 font-medium">{r.authorName}</span><span className={r.authorRank.class}>{r.authorRank.label}</span></div><div className="flex gap-2">{(isAdmin||user?.uid===r.authorId)&&<button onClick={()=>deleteReply(r.id)} className="text-slate-600 hover:text-red-400"><i className="fa-solid fa-trash text-xs"></i></button>}</div></div><RichText content={r.content}/></div></div>
                         ))}
                         <div ref={bottomRef}></div>
                     </div>
@@ -613,5 +514,4 @@
     </script>
 </body>
 </html>
-
 
