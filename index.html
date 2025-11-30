@@ -77,8 +77,6 @@
         } catch (e) { console.error(e); }
 
         const { useState, useEffect, useRef } = React;
-
-        // --- 1. HELPERS ---
         const getRank = (count) => {
             const base = "badge-base text-[10px] px-2.5 py-1 rounded-full uppercase";
             if (count >= 100) return { label: "Legend", class: `${base} badge-legend` };
