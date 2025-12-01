@@ -5,17 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BabaForum</title>
     
-    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
+    <!-- Simple Theme Color -->
     <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
 
-    <script>
-        window.onerror = function(msg, url, line) {
-            if (msg.includes("ResizeObserver")) return;
-            document.body.innerHTML = '<div style="color:red; padding:20px; background:black; font-family:monospace; z-index:10000; position:fixed; top:0; width:100%;"><h1>Error Detected</h1><p>'+msg+'</p><p>Line: '+line+'</p></div>';
-        };
-    </script>
-
+    <!-- Libraries -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -41,6 +34,9 @@
         .badge-member { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; border: 1px solid rgba(5, 150, 105, 0.4); }
         .badge-regular { background: rgba(37, 99, 235, 0.2); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.4); }
         .badge-legend { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(180, 83, 9, 0.2)); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.5); }
+        .category-chip { padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
+        .category-chip.active { background: #6366f1; color: white; border-color: #6366f1; }
+        .category-chip:not(.active) { background: rgba(30, 41, 59, 0.5); color: #94a3b8; }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -59,6 +55,7 @@
           measurementId: "G-F2ZTCCXPR2"
         };
 
+        // Firebase Initialization
         let app, auth, db;
         try {
             if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
@@ -70,6 +67,7 @@
 
         const { useState, useEffect, useRef } = React;
 
+        // --- HELPERS ---
         const getRank = (count) => {
             const base = "badge-base text-[10px] px-2.5 py-1 rounded-full uppercase";
             if (count >= 100) return { label: "Legend", class: `${base} badge-legend` };
@@ -113,6 +111,8 @@
                 });
             }
         };
+
+        // --- COMPONENTS ---
 
         function SetupScreen() {
             return (
@@ -202,32 +202,22 @@
 
         function InstallButton() {
             const [deferredPrompt, setDeferredPrompt] = useState(null);
-            const [isIOS, setIsIOS] = useState(false);
-            const [showIOSHelp, setShowIOSHelp] = useState(false);
             useEffect(() => {
                 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
-                const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                if(isIosDevice && !window.navigator.standalone) setIsIOS(true);
             }, []);
             const handleInstall = async () => {
-                if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') setDeferredPrompt(null); }
-                else if (isIOS) { setShowIOSHelp(true); }
-                else { alert("To install: Tap your browser's Menu button (⋮) and select 'Add to Home Screen'."); }
+                if (deferredPrompt) { 
+                    deferredPrompt.prompt(); 
+                    const { outcome } = await deferredPrompt.userChoice; 
+                    if (outcome === 'accepted') setDeferredPrompt(null); 
+                } else { 
+                    alert("To install: Tap your browser's Menu button (⋮) and select 'Add to Home Screen'."); 
+                }
             };
             return (
-                <>
-                    <button onClick={handleInstall} className="text-slate-400 hover:text-indigo-400 p-2 relative group"><i className="fa-solid fa-download text-xl"></i></button>
-                    {showIOSHelp && (
-                        <div className="fixed inset-0 bg-black/90 z-[10000] flex items-center justify-center p-6" onClick={() => setShowIOSHelp(false)}>
-                            <div className="glass-panel p-6 rounded-2xl text-center max-w-sm" onClick={e => e.stopPropagation()}>
-                                <h3 className="text-xl font-bold text-white mb-4">Install on iPhone</h3>
-                                <p className="text-slate-300 mb-4">1. Tap the <i className="fa-solid fa-arrow-up-from-bracket mx-1"></i> <strong>Share</strong> button in your browser bar.</p>
-                                <p className="text-slate-300 mb-6">2. Scroll down and tap <strong>Add to Home Screen</strong>.</p>
-                                <button onClick={() => setShowIOSHelp(false)} className="btn-primary w-full py-2 rounded-lg">Got it</button>
-                            </div>
-                        </div>
-                    )}
-                </>
+                <button onClick={handleInstall} className="text-slate-400 hover:text-indigo-400 p-2 relative group">
+                    <i className="fa-solid fa-download text-xl"></i>
+                </button>
             );
         }
 
@@ -240,13 +230,13 @@
             }, [user]);
             const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
             return (
-                <div className="absolute top-16 right-0 w-96 glass-panel rounded-2xl shadow-2xl overflow-hidden z-50 fade-in" style={{background: 'rgba(15, 23, 42, 0.98)'}}>
-                    <div className="p-4 bg-slate-900/50 border-b border-white/10 flex justify-between items-center"><h3 className="font-bold text-white">Notifications</h3><button onClick={onClose} className="text-slate-400 hover:text-white"><i className="fa-solid fa-xmark"></i></button></div>
-                    <div className="max-h-[400px] overflow-y-auto">
-                        {notes.length === 0 && <div className="p-8 text-center text-slate-500">No new notifications.</div>}
+                <div className="absolute top-16 right-0 w-80 glass-panel rounded-xl shadow-2xl overflow-hidden z-50 fade-in" style={{background: 'rgba(15, 23, 42, 0.98)'}}>
+                    <div className="p-3 bg-slate-900/50 border-b border-white/10 flex justify-between items-center"><h3 className="font-bold text-white text-sm">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
+                    <div className="max-h-80 overflow-y-auto">
+                        {notes.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No new notifications.</div>}
                         {notes.map(n => (
-                            <div key={n.id} onClick={() => markRead(n.id)} className={`p-4 border-b border-white/5 cursor-pointer transition-colors flex gap-3 items-start ${n.read ? 'hover:bg-slate-800/50 opacity-70' : 'bg-indigo-500/10 hover:bg-indigo-500/20'}`}>
-                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0"><i className="fa-solid fa-bell"></i></div>
+                            <div key={n.id} onClick={() => markRead(n.id)} className={`p-3 border-b border-white/5 cursor-pointer transition-colors flex gap-3 items-start ${n.read ? 'opacity-60 hover:opacity-100 hover:bg-white/5' : 'bg-indigo-500/10 hover:bg-indigo-500/20'}`}>
+                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 border border-indigo-500/30"><i className="fa-solid fa-bell"></i></div>
                                 <div>
                                     <p className="text-slate-200 text-sm"><span className="font-bold text-indigo-300">{n.fromName}</span> {n.message}</p>
                                     <div className="text-xs text-slate-500 mt-1.5">{n.createdAt ? new Date(n.createdAt.seconds * 1000).toLocaleTimeString() : 'Just now'}</div>
@@ -278,13 +268,13 @@
                     <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
                         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setMobileMenuOpen(false); onViewChange('home'); }}>
                             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                                <i className="fa-solid fa-cloud text-white text-xl"></i> <!-- Updated to Cloud Icon -->
+                                <i className="fa-solid fa-cloud text-white text-xl"></i>
                             </div>
                             <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tight">BabaForum</span>
                         </div>
                         
                         <div className="hidden md:flex items-center gap-5">
-                            <button onClick={()=>onViewChange('guilds')} className="text-slate-400 hover:text-white hidden md:block"><i className="fa-solid fa-users-rectangle mr-1"></i> Guilds</button>
+                            <button onClick={()=>onViewChange('guilds')} className="text-slate-400 hover:text-white font-medium flex items-center gap-2 transition-colors"><i className="fa-solid fa-users-rectangle mr-1"></i> Guilds</button>
                             <InstallButton />
                             {user ? (
                                 <>
@@ -297,7 +287,7 @@
                                         {showNotes && <Notifications user={user} onClose={() => setShowNotes(false)} />}
                                     </div>
                                     <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-700/50 hover:border-indigo-500 transition-all ring-2 ring-transparent hover:ring-indigo-500/30 shadow-md"><img src={user.photoURL} className="w-full h-full object-cover"/></button>
-                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-red-400 p-2 transition-colors"><i className="fa-solid fa-right-from-bracket text-lg"></i></button>
+                                    <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-red-400 p-2 transition-colors"><i className="fa-solid fa-right-from-bracket text-xl"></i></button>
                                 </>
                             ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg">Sign In</button>}
                         </div>
@@ -528,7 +518,7 @@
             const rank = getRank(profile.postCount || 0);
             return (
                 <div className="max-w-4xl mx-auto p-6 fade-in">
-                    <button onClick={()=>onViewChange('home')} className="text-slate-400 hover:text-white mb-8 flex gap-2 items-center font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back to Feed</button>
+                    <button onClick={()=>onViewChange('home')} className="text-slate-400 mb-6 flex gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
                     <div className="glass-panel p-10 rounded-3xl mb-10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left shadow-xl relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 z-0"></div>
                         <img src={profile.photoURL} className="w-32 h-32 rounded-full border-4 border-white/10 shadow-2xl relative z-10"/>
