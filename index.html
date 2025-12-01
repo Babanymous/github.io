@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BabaForum</title>
     
-    <!-- PWA Manifest -->
     <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
-    <!-- Error Handler -->
     <script>
         window.onerror = function(msg, url, line) {
             if (msg.includes("ResizeObserver")) return;
@@ -18,7 +16,6 @@
         };
     </script>
 
-    <!-- Libraries -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -32,23 +29,7 @@
     
     <style>
         body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        
-        /* Standard Glass Panel (For Posts/Feed) */
-        .glass-panel { 
-            background: rgba(30, 41, 59, 0.7); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid rgba(255, 255, 255, 0.08); 
-            box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2); 
-        }
-        
-        /* NEW: Solid Glass Panel (For Menus/Notifications) */
-        .glass-panel-solid { 
-            background: rgba(15, 23, 42, 0.98); /* Almost solid */
-            backdrop-filter: blur(20px); 
-            border: 1px solid rgba(255, 255, 255, 0.08); 
-            box-shadow: 0 10px 40px -5px rgba(0, 0, 0, 0.5); 
-        }
-
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2); }
         .glass-input { background: rgba(15, 23, 42, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; backdrop-filter: blur(10px); }
         .glass-input:focus { border-color: #818cf8 !important; outline: none; }
         .btn-primary { background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
@@ -60,6 +41,10 @@
         .badge-member { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; border: 1px solid rgba(5, 150, 105, 0.4); }
         .badge-regular { background: rgba(37, 99, 235, 0.2); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.4); }
         .badge-legend { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(180, 83, 9, 0.2)); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.5); }
+        .category-chip { padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
+        .category-chip.active { background: #6366f1; color: white; border-color: #6366f1; }
+        .category-chip:not(.active) { background: rgba(30, 41, 59, 0.5); color: #94a3b8; }
+        .category-chip:not(.active):hover { background: rgba(255,255,255,0.1); color: white; }
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -67,7 +52,6 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // ==========================================
         const ADMIN_UID = "dqRRlIXKOIaVJDwEsWV1KeOQDgC3"; 
         const firebaseConfig = {
           apiKey: "AIzaSyDycl15CdloFo0LYcWQXwflBTfzscGjAIA",
@@ -78,7 +62,6 @@
           appId: "1:428963221608:web:e284a66da91733d2e0abdd",
           measurementId: "G-F2ZTCCXPR2"
         };
-        // ==========================================
 
         let app, auth, db;
         try {
@@ -91,7 +74,6 @@
 
         const { useState, useEffect, useRef } = React;
 
-        // --- HELPERS ---
         const getRank = (count) => {
             const base = "badge-base text-[10px] px-2.5 py-1 rounded-full uppercase";
             if (count >= 100) return { label: "Legend", class: `${base} badge-legend` };
@@ -135,8 +117,6 @@
                 });
             }
         };
-
-        // --- UI COMPONENTS ---
 
         function SetupScreen() {
             return (
@@ -243,7 +223,7 @@
                     <button onClick={handleInstall} className="text-slate-400 hover:text-indigo-400 p-2 relative group"><i className="fa-solid fa-download text-xl"></i></button>
                     {showIOSHelp && (
                         <div className="fixed inset-0 bg-black/90 z-[10000] flex items-center justify-center p-6" onClick={() => setShowIOSHelp(false)}>
-                            <div className="glass-panel-solid p-6 rounded-2xl text-center max-w-sm" onClick={e => e.stopPropagation()}>
+                            <div className="glass-panel p-6 rounded-2xl text-center max-w-sm" onClick={e => e.stopPropagation()}>
                                 <h3 className="text-xl font-bold text-white mb-4">Install on iPhone</h3>
                                 <p className="text-slate-300 mb-4">1. Tap the <i className="fa-solid fa-arrow-up-from-bracket mx-1"></i> <strong>Share</strong> button in your browser bar.</p>
                                 <p className="text-slate-300 mb-6">2. Scroll down and tap <strong>Add to Home Screen</strong>.</p>
@@ -264,8 +244,7 @@
             }, [user]);
             const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
             return (
-                // CHANGED: glass-panel-solid
-                <div className="absolute top-16 right-0 w-96 glass-panel-solid rounded-2xl shadow-2xl overflow-hidden z-50 fade-in">
+                <div className="absolute top-16 right-0 w-96 glass-panel rounded-2xl shadow-2xl overflow-hidden z-50 fade-in" style={{background: 'rgba(15, 23, 42, 0.98)'}}>
                     <div className="p-4 bg-slate-900/50 border-b border-white/10 flex justify-between items-center"><h3 className="font-bold text-white">Notifications</h3><button onClick={onClose} className="text-slate-400 hover:text-white"><i className="fa-solid fa-xmark"></i></button></div>
                     <div className="max-h-[400px] overflow-y-auto">
                         {notes.length === 0 && <div className="p-8 text-center text-slate-500">No new notifications.</div>}
@@ -286,7 +265,7 @@
         function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId }) {
             const [showNotes, setShowNotes] = useState(false);
             const [unreadCount, setUnreadCount] = useState(0);
-            const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State for mobile menu
+            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
             const isAdmin = user && user.uid === ADMIN_UID;
 
             useEffect(() => {
@@ -296,7 +275,6 @@
             }, [user]);
 
             const handleLogin = () => { if (!auth) return alert("Config Error"); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); };
-            
             const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
             return (
@@ -306,7 +284,6 @@
                             <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tight">BabaForum</span>
                         </div>
                         
-                        {/* DESKTOP MENU */}
                         <div className="hidden md:flex items-center gap-5">
                             <button onClick={()=>onViewChange('guilds')} className="text-slate-400 hover:text-white"><i className="fa-solid fa-users-rectangle mr-1"></i> Guilds</button>
                             <InstallButton />
@@ -323,10 +300,9 @@
                                     <button onClick={() => { setViewUserId(user.uid); onViewChange('profile'); }} className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-700/50 hover:border-indigo-500 transition-all ring-2 ring-transparent hover:ring-indigo-500/30 shadow-md"><img src={user.photoURL} className="w-full h-full object-cover"/></button>
                                     <button onClick={() => auth.signOut()} className="text-slate-400 hover:text-red-400 p-2 transition-colors"><i className="fa-solid fa-right-from-bracket text-lg"></i></button>
                                 </>
-                            ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg">Sign In with Google</button>}
+                            ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg">Sign In</button>}
                         </div>
 
-                        {/* MOBILE HAMBURGER BUTTON */}
                         <div className="md:hidden flex items-center gap-4">
                             {user && (
                                 <div className="relative">
@@ -343,9 +319,8 @@
                         </div>
                     </div>
 
-                    {/* MOBILE DROPDOWN MENU - CHANGED: glass-panel-solid */}
                     {mobileMenuOpen && (
-                        <div className="md:hidden absolute top-20 left-0 w-full glass-panel-solid border-t border-white/10 flex flex-col p-4 gap-4 fade-in z-40">
+                        <div className="md:hidden absolute top-20 left-0 w-full glass-panel border-t border-white/10 flex flex-col p-4 gap-4 fade-in z-40" style={{background: 'rgba(15, 23, 42, 0.98)'}}>
                              {user ? (
                                 <>
                                     <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl" onClick={() => { setViewUserId(user.uid); onViewChange('profile'); setMobileMenuOpen(false); }}>
@@ -440,8 +415,6 @@
                 </div>
             );
         }
-
-        // --- 3. PAGE VIEWS ---
 
         function CreateGuild({ user, onViewChange }) {
             const [form, setForm] = useState({ name: '', description: '', icon: '' });
@@ -724,7 +697,9 @@
             const [topics, setTopics] = useState([]);
             const [loading, setLoading] = useState(true);
             const [search, setSearch] = useState("");
+            // NEW: CATEGORY STATE
             const [filter, setFilter] = useState('all'); 
+            const [category, setCategory] = useState('All');
             const [followingList, setFollowingList] = useState([]);
             const isAdmin = user && user.uid === ADMIN_UID;
 
@@ -757,7 +732,9 @@
             const displayTopics = topics.filter(t => {
                 const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || t.content.toLowerCase().includes(search.toLowerCase());
                 const matchesFilter = filter === 'all' || (filter === 'following' && followingList.includes(t.authorId));
-                return matchesSearch && matchesFilter;
+                // NEW: CATEGORY CHECK
+                const matchesCategory = category === 'All' || t.tag === category;
+                return matchesSearch && matchesFilter && matchesCategory;
             });
 
             const goToProfile = (e, uid) => { e.stopPropagation(); setViewUserId(uid); onViewChange('profile'); };
@@ -777,8 +754,20 @@
                             {user && <button onClick={() => onViewChange('create')} className="btn-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap"><i className="fa-solid fa-plus"></i> New</button>}
                         </div>
                     </div>
+
+                    {/* NEW: CATEGORY CHIPS */}
+                    {!selectedGuild && (
+                        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                            {['All', 'General', 'Help', 'Showcase', 'Ideas'].map(c => (
+                                <button key={c} onClick={() => setCategory(c)} className={`category-chip ${category === c ? 'active' : ''}`}>
+                                    {c}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {loading ? <div className="text-slate-500 text-center">Loading...</div> : displayTopics.map(topic => (
-                        <div key={topic.id} onClick={() => {setCurrentTopic(topic); onViewChange('thread')}} className={`glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800/80 flex gap-4 ${topic.isPinned ? 'border-l-4 border-amber-400' : ''}`}>
+                        <div key={topic.id} onClick={() => {setCurrentTopic(topic); onViewChange('thread')}} className={`glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800 flex gap-4 ${topic.isPinned ? 'border-l-4 border-amber-400' : ''}`}>
                             <div onClick={(e)=>goToProfile(e, topic.authorId)} className="flex-shrink-0 pt-1 cursor-pointer hover:opacity-80"><img src={topic.authorPhoto} className="w-10 h-10 rounded-full"/></div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between">
