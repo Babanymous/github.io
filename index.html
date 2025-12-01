@@ -274,7 +274,7 @@
                         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onViewChange('home')}>
                             <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tight">BabaForum</span>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-5">
                             <button onClick={()=>onViewChange('guilds')} className="text-slate-400 hover:text-white hidden md:block"><i className="fa-solid fa-users-rectangle mr-1"></i> Guilds</button>
                             <InstallButton />
                             {user ? (
@@ -614,7 +614,6 @@
                 const realName = userData.displayName || user.displayName;
                 const currentCount = (userData.postCount || 0) + 1;
                 await userRef.update({ postCount: currentCount });
-                
                 await db.collection('topics').add({
                     ...form, 
                     preview: previewText, 
@@ -629,7 +628,7 @@
             const handleImageInsert = (url) => setForm(prev => ({ ...prev, content: prev.content + `\n![Image](${url})\n` }));
             return (
                 <div className="max-w-3xl mx-auto p-6 fade-in">
-                    <button onClick={() => onViewChange('home')} className="text-slate-400 hover:text-white mb-6 flex items-center gap-2 font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back</button>
+                    <button onClick={() => onViewChange('home')} className="text-slate-400 hover:text-white mb-6 flex items-center gap-2 font-medium transition-colors"><i className="fa-solid fa-arrow-left"></i> Back to Feed</button>
                     <div className="glass-panel p-10 rounded-3xl shadow-xl">
                         <h2 className="text-3xl font-extrabold text-white mb-8 tracking-tight">
                             {selectedGuild ? `New Post in ${selectedGuild.name}` : 'Create New Topic'}
@@ -730,84 +729,6 @@
                             </div>
                         </div>
                     ))}
-                </div>
-            );
-        }
-
-        function CreateGuild({ user, onViewChange }) {
-            const [form, setForm] = useState({ name: '', description: '', icon: '' });
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                await db.collection('guilds').add({
-                    ...form, createdBy: user.uid, memberCount: 1, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                const guildSnap = await db.collection('guilds').where('name', '==', form.name).get();
-                if(!guildSnap.empty) {
-                    const guildId = guildSnap.docs[0].id;
-                    await db.collection('users').doc(user.uid).update({ guilds: firebase.firestore.FieldValue.arrayUnion(guildId) });
-                }
-                onViewChange('guilds');
-            };
-            return (
-                <div className="max-w-2xl mx-auto p-4 fade-in">
-                    <button onClick={()=>onViewChange('guilds')} className="text-slate-400 mb-4"><i className="fa-solid fa-arrow-left"></i> Back</button>
-                    <div className="glass-panel p-8 rounded-2xl">
-                        <h2 className="text-2xl font-bold text-white mb-6">Create Guild</h2>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <input className="w-full glass-input rounded-lg p-3 text-white" placeholder="Guild Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required />
-                            <input className="w-full glass-input rounded-lg p-3 text-white" placeholder="Icon Emoji (e.g. 🎮)" value={form.icon} onChange={e=>setForm({...form, icon:e.target.value})} required />
-                            <textarea className="w-full glass-input rounded-lg p-3 text-white" placeholder="Description" value={form.description} onChange={e=>setForm({...form, description:e.target.value})} required />
-                            <button type="submit" className="w-full btn-primary text-white py-3 rounded-xl font-bold">Create</button>
-                        </form>
-                    </div>
-                </div>
-            );
-        }
-
-        function GuildList({ user, onViewChange, setSelectedGuild }) {
-            const [guilds, setGuilds] = useState([]);
-            const [myGuilds, setMyGuilds] = useState([]);
-            
-            useEffect(() => {
-                db.collection('guilds').orderBy('memberCount', 'desc').onSnapshot(s => setGuilds(s.docs.map(d=>({id:d.id,...d.data()}))));
-                if(user) db.collection('users').doc(user.uid).onSnapshot(d => setMyGuilds(d.data()?.guilds || []));
-            }, [user]);
-
-            const toggleJoin = async (e, guildId) => {
-                e.stopPropagation(); if(!user) return alert("Sign in!");
-                const isMember = myGuilds.includes(guildId);
-                const batch = db.batch();
-                const uRef = db.collection('users').doc(user.uid);
-                const gRef = db.collection('guilds').doc(guildId);
-                if(isMember) {
-                    batch.update(uRef, { guilds: firebase.firestore.FieldValue.arrayRemove(guildId) });
-                    batch.update(gRef, { memberCount: firebase.firestore.FieldValue.increment(-1) });
-                } else {
-                    batch.update(uRef, { guilds: firebase.firestore.FieldValue.arrayUnion(guildId) });
-                    batch.update(gRef, { memberCount: firebase.firestore.FieldValue.increment(1) });
-                }
-                await batch.commit();
-            };
-
-            return (
-                <div className="max-w-5xl mx-auto p-4 fade-in space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-3xl font-bold text-white">Guilds</h2>
-                        {user && <button onClick={()=>onViewChange('createGuild')} className="btn-primary text-white px-4 py-2 rounded-lg"><i className="fa-solid fa-plus"></i> Create</button>}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {guilds.map(g => (
-                            <div key={g.id} onClick={()=>{setSelectedGuild(g); onViewChange('home');}} className="glass-panel p-5 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors relative group">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="text-4xl">{g.icon || '🛡️'}</div>
-                                    <button onClick={(e)=>toggleJoin(e,g.id)} className={`px-3 py-1 rounded text-xs font-bold ${myGuilds.includes(g.id) ? 'bg-slate-700 text-slate-300' : 'btn-primary text-white'}`}>{myGuilds.includes(g.id) ? 'Joined' : 'Join'}</button>
-                                </div>
-                                <h3 className="text-xl font-bold text-white">{g.name}</h3>
-                                <p className="text-slate-400 text-sm mt-1 line-clamp-2">{g.description}</p>
-                                <div className="mt-3 text-xs text-slate-500 font-bold uppercase">{g.memberCount || 0} Members</div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             );
         }
