@@ -240,7 +240,7 @@
             }, [user]);
             const markRead = (id) => db.collection('notifications').doc(id).update({ read: true });
             return (
-                <div className="absolute top-16 right-0 w-96 glass-panel rounded-2xl shadow-2xl overflow-hidden z-50 fade-in">
+                <div className="absolute top-16 right-0 w-80 glass-panel rounded-2xl shadow-2xl overflow-hidden z-50 fade-in">
                     <div className="p-4 bg-slate-900/50 border-b border-white/10 flex justify-between items-center"><h3 className="font-bold text-white">Notifications</h3><button onClick={onClose}><i className="fa-solid fa-xmark text-slate-400"></i></button></div>
                     <div className="max-h-[400px] overflow-y-auto">
                         {notes.length === 0 && <div className="p-8 text-center text-slate-500">No new notifications.</div>}
@@ -258,24 +258,33 @@
             );
         }
 
+        // --- MOBILE RESPONSIVE NAVBAR ---
         function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId }) {
             const [showNotes, setShowNotes] = useState(false);
             const [unreadCount, setUnreadCount] = useState(0);
+            const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State for mobile menu
             const isAdmin = user && user.uid === ADMIN_UID;
+
             useEffect(() => {
                 if(!user) return;
                 const unsub = db.collection('notifications').where('toUserId', '==', user.uid).where('read', '==', false).onSnapshot(snap => setUnreadCount(snap.size));
                 return () => unsub();
             }, [user]);
+
             const handleLogin = () => { if (!auth) return alert("Config Error"); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); };
+            
+            const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+
             return (
-                <nav className="glass-panel sticky top-0 z-50 border-b-0 shadow-sm backdrop-blur-xl">
+                <nav className="glass-panel sticky top-0 z-50 border-b-0 shadow-sm backdrop-blur-xl relative">
                     <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
-                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => onViewChange('home')}>
+                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setMobileMenuOpen(false); onViewChange('home'); }}>
                             <span className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tight">BabaForum</span>
                         </div>
-                        <div className="flex items-center gap-5">
-                            <button onClick={()=>onViewChange('guilds')} className="text-slate-400 hover:text-white hidden md:block"><i className="fa-solid fa-users-rectangle mr-1"></i> Guilds</button>
+                        
+                        {/* DESKTOP MENU */}
+                        <div className="hidden md:flex items-center gap-5">
+                            <button onClick={()=>onViewChange('guilds')} className="text-slate-400 hover:text-white"><i className="fa-solid fa-users-rectangle mr-1"></i> Guilds</button>
                             <InstallButton />
                             {user ? (
                                 <>
@@ -292,7 +301,48 @@
                                 </>
                             ) : <button onClick={handleLogin} className="btn-primary text-white px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg">Sign In</button>}
                         </div>
+
+                        {/* MOBILE HAMBURGER BUTTON */}
+                        <div className="md:hidden flex items-center gap-4">
+                            {user && (
+                                <div className="relative">
+                                    <button onClick={() => setShowNotes(!showNotes)} className="text-slate-400 hover:text-white relative">
+                                        <i className="fa-regular fa-bell text-xl"></i>
+                                        {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-slate-900">{unreadCount}</span>}
+                                    </button>
+                                    {showNotes && <Notifications user={user} onClose={() => setShowNotes(false)} />}
+                                </div>
+                            )}
+                            <button onClick={toggleMobileMenu} className="text-slate-300 hover:text-white p-2">
+                                <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'} text-2xl`}></i>
+                            </button>
+                        </div>
                     </div>
+
+                    {/* MOBILE DROPDOWN MENU */}
+                    {mobileMenuOpen && (
+                        <div className="md:hidden absolute top-20 left-0 w-full glass-panel border-t border-white/10 flex flex-col p-4 gap-4 fade-in z-40">
+                             {user ? (
+                                <>
+                                    <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl" onClick={() => { setViewUserId(user.uid); onViewChange('profile'); setMobileMenuOpen(false); }}>
+                                        <img src={user.photoURL} className="w-10 h-10 rounded-full border border-slate-500"/>
+                                        <div>
+                                            <div className="font-bold text-white">{user.displayName}</div>
+                                            <div className="text-xs text-slate-400">View Profile</div>
+                                        </div>
+                                    </div>
+                                    <button onClick={()=>{onViewChange('guilds'); setMobileMenuOpen(false);}} className="p-3 bg-slate-800/30 rounded-xl text-left text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-3"><i className="fa-solid fa-users-rectangle text-indigo-400"></i> Guilds</button>
+                                    {isAdmin && <button onClick={()=>{onOpenAdmin(); setMobileMenuOpen(false);}} className="p-3 bg-slate-800/30 rounded-xl text-left text-amber-400 hover:bg-slate-800 transition-colors flex items-center gap-3"><i className="fa-solid fa-shield-halved"></i> Admin Panel</button>}
+                                    <div className="flex gap-2">
+                                        <div className="flex-1"><InstallButton /></div> {/* Install Button in menu */}
+                                        <button onClick={() => {auth.signOut(); setMobileMenuOpen(false);}} className="flex-1 p-3 bg-red-500/10 text-red-400 rounded-xl font-bold text-center hover:bg-red-500/20 transition-colors">Sign Out</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <button onClick={() => {handleLogin(); setMobileMenuOpen(false);}} className="btn-primary w-full py-3 rounded-xl font-bold">Sign In with Google</button>
+                            )}
+                        </div>
+                    )}
                 </nav>
             );
         }
@@ -366,6 +416,8 @@
                 </div>
             );
         }
+
+        // --- 3. PAGE VIEWS ---
 
         function CreateGuild({ user, onViewChange }) {
             const [form, setForm] = useState({ name: '', description: '', icon: '' });
@@ -685,7 +737,18 @@
             });
 
             const goToProfile = (e, uid) => { e.stopPropagation(); setViewUserId(uid); onViewChange('profile'); };
-            const deleteTopic = async (e, t) => { e.stopPropagation(); if(confirm("Delete?")) { const b = db.batch(); b.delete(db.collection('topics').doc(t.id)); const userRef = db.collection('users').doc(t.authorId); b.update(userRef, { postCount: firebase.firestore.FieldValue.increment(-1) }); const rs = await db.collection('replies').where('topicId','==',t.id).get(); rs.forEach(r => b.delete(r.ref)); await b.commit(); } };
+            const deleteTopic = async (e, t) => { 
+                e.stopPropagation(); 
+                if(confirm("Delete?")) { 
+                    const b = db.batch(); 
+                    b.delete(db.collection('topics').doc(t.id)); 
+                    const userRef = db.collection('users').doc(t.authorId); 
+                    b.update(userRef, { postCount: firebase.firestore.FieldValue.increment(-1) }); 
+                    const rs = await db.collection('replies').where('topicId','==',t.id).get(); 
+                    rs.forEach(r => b.delete(r.ref)); 
+                    await b.commit(); 
+                } 
+            };
             const togglePin = async (e, topic) => { e.stopPropagation(); await db.collection('topics').doc(topic.id).update({ isPinned: !topic.isPinned }); };
 
             return (
