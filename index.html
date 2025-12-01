@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BabaForum</title>
     
-    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#020617","theme_color":"#020617","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
     <meta name="theme-color" content="#020617">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -28,87 +28,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        body { 
-            background-color: #020617; 
-            color: #e2e8f0; 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-        }
-        
-        .bg-aurora {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1;
-            background: 
-                radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%), 
-                radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15), transparent 25%);
-            filter: blur(40px);
-            animation: auroraMove 20s ease infinite alternate;
-        }
-
-        @keyframes auroraMove {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.1); }
-        }
-
-        .glass-panel { 
-            background: rgba(15, 23, 42, 0.6); 
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.05); 
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .glass-panel-solid { 
-            background: #0f172a; 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
-
-        .glass-input { 
-            background: rgba(2, 6, 23, 0.5) !important; 
-            border: 1px solid rgba(255, 255, 255, 0.08) !important; 
-            transition: all 0.2s;
-        }
-        .glass-input:focus { 
-            border-color: #818cf8 !important; 
-            background: rgba(2, 6, 23, 0.8) !important;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-            outline: none; 
-        }
-
-        .btn-primary { 
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); 
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-            border: 1px solid rgba(255,255,255,0.1);
-            position: relative; overflow: hidden;
-        }
-        .btn-primary:hover { 
-            box-shadow: 0 0 30px rgba(168, 85, 247, 0.6);
-            transform: translateY(-1px); 
-        }
-        
+        body { background-color: #020617; color: #e2e8f0; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .bg-aurora { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background: radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%), radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15), transparent 25%); filter: blur(40px); animation: auroraMove 20s ease infinite alternate; }
+        @keyframes auroraMove { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
+        .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .glass-panel-solid { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .glass-input { background: rgba(2, 6, 23, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; transition: all 0.2s; }
+        .glass-input:focus { border-color: #818cf8 !important; background: rgba(2, 6, 23, 0.8) !important; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); outline: none; }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+        .btn-primary:hover { box-shadow: 0 0 30px rgba(168, 85, 247, 0.6); transform: translateY(-1px); }
         .btn-danger { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
         .btn-outline { border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; background: rgba(255,255,255,0.02); }
         .btn-outline:hover { border-color: #818cf8; color: white; background: rgba(99, 102, 241, 0.1); }
-
         .prose img { max-width: 100%; border-radius: 16px; margin: 16px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); cursor: zoom-in; }
         .prose code { background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px; font-family: 'Fira Code', monospace; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.1); }
         .prose blockquote { border-left: 4px solid #818cf8; padding-left: 1rem; font-style: italic; color: #94a3b8; margin: 1rem 0; }
-        
         .badge-base { font-weight: 700; letter-spacing: 0.05em; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .badge-new { background: #334155; color: #e2e8f0; border: 1px solid #475569; }
         .badge-member { background: #065f46; color: #6ee7b7; border: 1px solid #059669; }
         .badge-regular { background: #1e40af; color: #93c5fd; border: 1px solid #2563eb; }
         .badge-legend { background: linear-gradient(135deg, #b45309, #f59e0b); color: white; border: 1px solid #fcd34d; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-        
         .category-chip { padding: 8px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; transition: all 0.3s; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); white-space: nowrap; backdrop-filter: blur(4px); }
         .category-chip.active { background: #6366f1; color: white; border-color: #818cf8; box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
         .category-chip:not(.active) { background: rgba(255,255,255,0.03); color: #94a3b8; }
         .category-chip:not(.active):hover { background: rgba(255,255,255,0.08); color: white; }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
@@ -196,6 +139,33 @@
                         <p className="text-slate-400 mb-8 text-lg font-medium">Please configure your Firebase keys in the HTML file to launch the app.</p>
                         <button onClick={() => window.location.reload()} className="btn-primary text-white px-10 py-4 rounded-xl font-bold tracking-wide text-lg w-full">Reload App</button>
                     </div>
+                </div>
+            );
+        }
+
+        function MarkdownToolbar({ textareaRef, value, setValue }) {
+            const insert = (prefix, suffix) => {
+                const el = textareaRef.current;
+                if (!el) return;
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                const text = el.value;
+                const before = text.substring(0, start);
+                const selected = text.substring(start, end);
+                const after = text.substring(end);
+                const newText = before + prefix + selected + suffix + after;
+                setValue(newText);
+                setTimeout(() => { el.focus(); el.setSelectionRange(start + prefix.length, end + prefix.length); }, 0);
+            };
+
+            return (
+                <div className="flex gap-1 mb-3 overflow-x-auto pb-2 no-scrollbar border-b border-white/10">
+                    <button type="button" onClick={() => insert('**', '**')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Bold"><i className="fa-solid fa-bold"></i></button>
+                    <button type="button" onClick={() => insert('*', '*')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Italic"><i className="fa-solid fa-italic"></i></button>
+                    <button type="button" onClick={() => insert('`', '`')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Code"><i className="fa-solid fa-code"></i></button>
+                    <button type="button" onClick={() => insert('\n> ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Quote"><i className="fa-solid fa-quote-right"></i></button>
+                    <button type="button" onClick={() => insert('[', '](url)')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Link"><i className="fa-solid fa-link"></i></button>
+                    <button type="button" onClick={() => insert('\n- ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="List"><i className="fa-solid fa-list"></i></button>
                 </div>
             );
         }
@@ -730,7 +700,7 @@
                         ))}
                         <div ref={bottomRef}></div>
                     </div>
-                    {user && <div className="bg-[#0f172a]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 mt-4 shadow-2xl"><div className="mb-3 px-1"><ImageUpload onUpload={handleImageInsert}/></div><form onSubmit={postReply} className="relative"><textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full glass-input rounded-2xl p-4 pr-14 text-white placeholder-slate-500 resize-none" placeholder="Write a reply..." rows="3"/><button type="submit" className="absolute right-3 bottom-3 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg transition-colors"><i className="fa-solid fa-paper-plane"></i></button></form></div>}
+                    {user && <div className="bg-[#0f172a]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 mt-4 shadow-2xl"><div className="flex items-center justify-between mb-2"><MarkdownToolbar textareaRef={useRef(null)} value={newReply} setValue={setNewReply} /><div className="mb-1"><ImageUpload onUpload={handleImageInsert}/></div></div><form onSubmit={postReply} className="relative"><textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full glass-input rounded-2xl p-4 pr-14 text-white placeholder-slate-500 resize-none" placeholder="Write a reply..." rows="3"/><button type="submit" className="absolute right-3 bottom-3 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg transition-colors"><i className="fa-solid fa-paper-plane"></i></button></form></div>}
                 </div>
             );
         }
@@ -738,6 +708,7 @@
         function CreateTopic({ user, onViewChange, selectedGuild }) {
             const [form, setForm] = useState({ title: '', content: '', tag: 'General', guildId: selectedGuild ? selectedGuild.id : null });
             const [submitting, setSubmitting] = useState(false);
+            const contentRef = useRef(null);
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setSubmitting(true);
@@ -773,7 +744,11 @@
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <input className="w-full glass-input rounded-xl px-5 py-4 text-white text-lg font-bold placeholder-slate-500" placeholder="Title" value={form.title} onChange={e=>setForm({...form, title:e.target.value})} required />
                             {!selectedGuild && <select className="glass-input rounded-xl px-5 py-3 text-white font-medium" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}><option>General</option><option>Help</option><option>Showcase</option><option>Ideas</option></select>}
-                            <div><textarea className="w-full h-64 bg-slate-900/30 border border-white/10 rounded-xl p-4 text-white" placeholder="Content..." value={form.content} onChange={e=>setForm({...form, content:e.target.value})} required /><div className="mt-2"><ImageUpload onUpload={handleImageInsert} /></div></div>
+                            <div>
+                                <MarkdownToolbar textareaRef={contentRef} value={form.content} setValue={(val)=>setForm({...form, content:val})} />
+                                <textarea ref={contentRef} className="w-full h-64 bg-slate-900/30 border border-white/10 rounded-xl p-4 text-white" placeholder="Content..." value={form.content} onChange={e=>setForm({...form, content:e.target.value})} required />
+                                <div className="mt-2"><ImageUpload onUpload={handleImageInsert} /></div>
+                            </div>
                             <button type="submit" disabled={submitting} className="w-full btn-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg">{submitting ? "Publishing..." : "Publish"}</button>
                         </form>
                     </div>
@@ -879,6 +854,33 @@
                             </div>
                         </div>
                     ))}
+                </div>
+            );
+        }
+
+        function MarkdownToolbar({ textareaRef, value, setValue }) {
+            const insert = (prefix, suffix) => {
+                const el = textareaRef.current;
+                if (!el) return;
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                const text = el.value;
+                const before = text.substring(0, start);
+                const selected = text.substring(start, end);
+                const after = text.substring(end);
+                const newText = before + prefix + selected + suffix + after;
+                setValue(newText);
+                setTimeout(() => { el.focus(); el.setSelectionRange(start + prefix.length, end + prefix.length); }, 0);
+            };
+
+            return (
+                <div className="flex gap-1 mb-3 overflow-x-auto pb-2 no-scrollbar border-b border-white/10">
+                    <button type="button" onClick={() => insert('**', '**')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Bold"><i className="fa-solid fa-bold"></i></button>
+                    <button type="button" onClick={() => insert('*', '*')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Italic"><i className="fa-solid fa-italic"></i></button>
+                    <button type="button" onClick={() => insert('`', '`')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Code"><i className="fa-solid fa-code"></i></button>
+                    <button type="button" onClick={() => insert('\n> ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Quote"><i className="fa-solid fa-quote-right"></i></button>
+                    <button type="button" onClick={() => insert('[', '](url)')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Link"><i className="fa-solid fa-link"></i></button>
+                    <button type="button" onClick={() => insert('\n- ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="List"><i className="fa-solid fa-list"></i></button>
                 </div>
             );
         }
