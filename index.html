@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BabaForum</title>
     
-    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#020617","theme_color":"#020617","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
     <meta name="theme-color" content="#020617">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -14,6 +14,14 @@
             if (msg.includes("ResizeObserver")) return;
             document.body.innerHTML = '<div style="color:red; padding:20px; background:black; font-family:monospace; z-index:10000; position:fixed; top:0; width:100%;"><h1>Error Detected</h1><p>'+msg+'</p><p>Line: '+line+'</p></div>';
         };
+
+        // --- PWA SERVICE WORKER HACK (Tricks browser into allowing install) ---
+        if ('serviceWorker' in navigator) {
+            const swContent = 'self.addEventListener("fetch", (event) => {});'; 
+            const blob = new Blob([swContent], { type: 'text/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(console.error);
+        }
     </script>
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -24,7 +32,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -133,13 +140,12 @@
           measurementId: "G-F2ZTCCXPR2"
         };
 
-        let app, auth, db, analytics;
+        let app, auth, db;
         try {
             if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
                 app = firebase.initializeApp(firebaseConfig);
                 auth = firebase.auth();
                 db = firebase.firestore();
-                analytics = firebase.analytics();
             }
         } catch (e) { console.error("Firebase Init Error:", e); }
 
@@ -303,34 +309,83 @@
             );
         }
 
-        function InstallButton() {
+        function InstallModal({ onClose }) {
             const [deferredPrompt, setDeferredPrompt] = useState(null);
             const [isIOS, setIsIOS] = useState(false);
-            const [showIOSHelp, setShowIOSHelp] = useState(false);
+            const [showInstructions, setShowInstructions] = useState(false);
+
             useEffect(() => {
-                window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    setDeferredPrompt(e);
+                    // Auto-show modal on first visit if installable
+                    if (!localStorage.getItem('installDismissed')) {
+                        // Small delay to let the UI load first
+                        setTimeout(() => {
+                           // Logic handled by parent to show this component, 
+                           // but here we just ensure the prompt is captured.
+                        }, 1000);
+                    }
+                });
+                
                 const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                if(isIosDevice && !window.navigator.standalone) setIsIOS(true);
+                // Check if already in standalone
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+                
+                if (isIosDevice && !isStandalone) {
+                    setIsIOS(true);
+                }
             }, []);
+
             const handleInstall = async () => {
-                if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') setDeferredPrompt(null); }
-                else if (isIOS) { setShowIOSHelp(true); }
-                else { alert("To install: Tap your browser's Menu button (⋮) and select 'Add to Home Screen'."); }
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        setDeferredPrompt(null);
+                        onClose();
+                    }
+                } else if (isIOS) {
+                    setShowInstructions(true);
+                } else {
+                    alert("To install: Tap your browser's Menu button (⋮) and select 'Add to Home Screen'.");
+                }
             };
+
+            const dismiss = () => {
+                localStorage.setItem('installDismissed', 'true');
+                onClose();
+            };
+
+            // Only render if there's something to do (prompt available OR iOS)
+            if (!deferredPrompt && !isIOS && !showInstructions) return null;
+
             return (
-                <>
-                    <button onClick={handleInstall} className="text-slate-400 hover:text-indigo-400 p-2 relative group transition-colors"><i className="fa-solid fa-download text-xl"></i></button>
-                    {showIOSHelp && (
-                        <div className="fixed inset-0 bg-black/90 z-[10000] flex items-center justify-center p-6" onClick={() => setShowIOSHelp(false)}>
-                            <div className="glass-panel-solid p-6 rounded-2xl text-center max-w-sm border border-white/10" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/80 z-[10000] flex items-center justify-center p-6 fade-in">
+                    <div className="glass-panel-solid p-8 rounded-3xl max-w-sm text-center border border-white/10 shadow-2xl relative">
+                        <button onClick={dismiss} className="absolute top-4 right-4 text-slate-400 hover:text-white"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        
+                        {!showInstructions ? (
+                            <>
+                                <div className="w-16 h-16 bg-indigo-500 rounded-2xl mx-auto mb-6 flex items-center justify-center text-3xl shadow-lg"><i className="fa-solid fa-cloud text-white"></i></div>
+                                <h3 className="text-2xl font-bold text-white mb-2">Install App</h3>
+                                <p className="text-slate-400 mb-8 leading-relaxed">Install BabaForum for a better, full-screen experience.</p>
+                                <button onClick={handleInstall} className="btn-primary w-full py-3 rounded-xl font-bold text-lg shadow-lg mb-3">Install Now</button>
+                                <button onClick={dismiss} className="text-slate-500 text-sm hover:text-white">Not now</button>
+                            </>
+                        ) : (
+                            <>
                                 <h3 className="text-xl font-bold text-white mb-4">Install on iPhone</h3>
-                                <p className="text-slate-300 mb-4">1. Tap the <i className="fa-solid fa-arrow-up-from-bracket mx-1"></i> <strong>Share</strong> button in your browser bar.</p>
-                                <p className="text-slate-300 mb-6">2. Scroll down and tap <strong>Add to Home Screen</strong>.</p>
-                                <button onClick={() => setShowIOSHelp(false)} className="btn-primary w-full py-3 rounded-xl font-bold">Got it</button>
-                            </div>
-                        </div>
-                    )}
-                </>
+                                <div className="space-y-4 text-left bg-white/5 p-4 rounded-xl mb-6">
+                                    <p className="text-slate-300 flex items-center gap-3"><span className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold">1</span> Tap the <i className="fa-solid fa-arrow-up-from-bracket text-blue-400"></i> <strong>Share</strong> button.</p>
+                                    <p className="text-slate-300 flex items-center gap-3"><span className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold">2</span> Scroll down.</p>
+                                    <p className="text-slate-300 flex items-center gap-3"><span className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold">3</span> Tap <strong>Add to Home Screen</strong>.</p>
+                                </div>
+                                <button onClick={dismiss} className="btn-primary w-full py-3 rounded-xl font-bold">Got it</button>
+                            </>
+                        )}
+                    </div>
+                </div>
             );
         }
 
@@ -361,7 +416,7 @@
             );
         }
 
-        function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId }) {
+        function Navbar({ user, onViewChange, onOpenAdmin, setViewUserId, onInstallClick }) {
             const [showNotes, setShowNotes] = useState(false);
             const [unreadCount, setUnreadCount] = useState(0);
             const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -388,7 +443,7 @@
                         
                         <div className="hidden md:flex items-center gap-6">
                             <button onClick={()=>onViewChange('guilds')} className="text-slate-300 hover:text-white font-medium flex items-center gap-2 transition-colors"><i className="fa-solid fa-users-rectangle text-indigo-400"></i> Guilds</button>
-                            <InstallButton />
+                            <button onClick={onInstallClick} className="text-slate-400 hover:text-indigo-400 p-2 relative group transition-colors" title="Install App"><i className="fa-solid fa-download text-xl"></i></button>
                             {user ? (
                                 <>
                                     {isAdmin && <button onClick={onOpenAdmin} className="text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20"><i className="fa-solid fa-shield-halved"></i></button>}
@@ -435,7 +490,7 @@
                                     <button onClick={()=>{onViewChange('guilds'); setMobileMenuOpen(false);}} className="p-4 bg-white/5 rounded-xl text-left text-slate-200 font-medium hover:bg-white/10 transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center"><i className="fa-solid fa-users-rectangle text-indigo-400"></i></div> Browse Guilds</button>
                                     {isAdmin && <button onClick={()=>{onOpenAdmin(); setMobileMenuOpen(false);}} className="p-4 bg-white/5 rounded-xl text-left text-amber-400 font-medium hover:bg-white/10 transition-colors flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center"><i className="fa-solid fa-shield-halved"></i></div> Admin Panel</button>}
                                     <div className="flex gap-3 pt-2">
-                                        <div className="flex-1 bg-white/5 rounded-xl flex items-center justify-center p-2"><InstallButton /></div>
+                                        <button onClick={() => {onInstallClick(); setMobileMenuOpen(false);}} className="flex-1 bg-white/5 rounded-xl flex items-center justify-center p-2 text-slate-300 hover:text-white"><i className="fa-solid fa-download text-xl"></i></button>
                                         <button onClick={() => {auth.signOut(); setMobileMenuOpen(false);}} className="flex-[2] p-3 bg-red-500/10 text-red-400 rounded-xl font-bold text-center hover:bg-red-500/20 transition-colors border border-red-500/20">Sign Out</button>
                                     </div>
                                 </>
@@ -925,8 +980,20 @@
             const [selectedGuild, setSelectedGuild] = useState(null);
             const [isConfigured, setIsConfigured] = useState(false);
             const [showAdmin, setShowAdmin] = useState(false);
+            const [installPrompt, setInstallPrompt] = useState(null);
 
             useEffect(() => {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    setInstallPrompt(e);
+                    // Show install modal if not dismissed
+                    if (!localStorage.getItem('installDismissed')) {
+                        setTimeout(() => {
+                           // Logic handled by child component, but prompt captured here
+                        }, 1000);
+                    }
+                });
+
                 if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
                     setIsConfigured(true);
                     return auth.onAuthStateChanged(async (u) => {
@@ -936,11 +1003,30 @@
                 }
             }, []);
 
+            const handleInstallClick = () => {
+                 if (installPrompt) {
+                     installPrompt.prompt();
+                     installPrompt.userChoice.then((choiceResult) => {
+                         if (choiceResult.outcome === 'accepted') {
+                             setInstallPrompt(null);
+                         }
+                     });
+                 } else {
+                     // Fallback for when prompt isn't available (iOS or already installed)
+                     alert("To install: Tap your browser's Menu button (⋮) and select 'Add to Home Screen'.");
+                 }
+            };
+
             if (!isConfigured) return <SetupScreen />;
 
             return (
                 <div className="min-h-screen pb-10">
-                    <Navbar user={user} onViewChange={setView} onOpenAdmin={() => setShowAdmin(true)} setViewUserId={setViewUserId} />
+                    <Navbar user={user} onViewChange={setView} onOpenAdmin={() => setShowAdmin(true)} setViewUserId={setViewUserId} onInstallClick={handleInstallClick} />
+                    
+                    {/* Auto Show Install Modal if available and not dismissed */}
+                    {installPrompt && !localStorage.getItem('installDismissed') && (
+                         <InstallModal onClose={() => localStorage.setItem('installDismissed', 'true')} />
+                    )}
                     
                     {showAdmin && <AdminDashboard onClose={() => setShowAdmin(false)} />}
                     
