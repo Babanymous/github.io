@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BabaForum</title>
     
-    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#020617","theme_color":"#020617","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/manifest+json,{"name":"BabaForum","short_name":"BabaForum","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1041/1041916.png","sizes":"512x512","type":"image/png"}]}'>
     <meta name="theme-color" content="#020617">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
     <script>
         window.onerror = function(msg, url, line) {
             if (msg.includes("ResizeObserver")) return;
-            document.body.innerHTML = '<div style="color:#ff5555; padding:20px; background:#000; font-family:monospace; z-index:10000; position:fixed; top:0; width:100%;"><h1>Error Detected</h1><p>'+msg+'</p><p>Line: '+line+'</p></div>';
+            document.body.innerHTML = '<div style="color:red; padding:20px; background:black; font-family:monospace; z-index:10000; position:fixed; top:0; width:100%;"><h1>Error Detected</h1><p>'+msg+'</p><p>Line: '+line+'</p></div>';
         };
     </script>
 
@@ -28,87 +28,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        body { 
-            background-color: #020617; 
-            color: #e2e8f0; 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-        }
-        
-        .bg-aurora {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1;
-            background: 
-                radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%), 
-                radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15), transparent 25%);
-            filter: blur(40px);
-            animation: auroraMove 20s ease infinite alternate;
-        }
-
-        @keyframes auroraMove {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.1); }
-        }
-
-        .glass-panel { 
-            background: rgba(15, 23, 42, 0.6); 
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.05); 
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .glass-panel-solid { 
-            background: #0f172a; 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
-
-        .glass-input { 
-            background: rgba(2, 6, 23, 0.5) !important; 
-            border: 1px solid rgba(255, 255, 255, 0.08) !important; 
-            transition: all 0.2s;
-        }
-        .glass-input:focus { 
-            border-color: #818cf8 !important; 
-            background: rgba(2, 6, 23, 0.8) !important;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-            outline: none; 
-        }
-
-        .btn-primary { 
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); 
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-            border: 1px solid rgba(255,255,255,0.1);
-            position: relative; overflow: hidden;
-        }
-        .btn-primary:hover { 
-            box-shadow: 0 0 30px rgba(168, 85, 247, 0.6);
-            transform: translateY(-1px); 
-        }
-        
+        body { background-color: #020617; color: #e2e8f0; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .bg-aurora { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background: radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%), radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15), transparent 25%); filter: blur(40px); animation: auroraMove 20s ease infinite alternate; }
+        @keyframes auroraMove { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
+        .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
+        .glass-panel-solid { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .glass-input { background: rgba(2, 6, 23, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; }
+        .glass-input:focus { border-color: #818cf8 !important; background: rgba(2, 6, 23, 0.8) !important; outline: none; }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: 1px solid rgba(255,255,255,0.1); }
         .btn-danger { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
         .btn-outline { border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; background: rgba(255,255,255,0.02); }
-        .btn-outline:hover { border-color: #818cf8; color: white; background: rgba(99, 102, 241, 0.1); }
-
-        .prose img { max-width: 100%; border-radius: 16px; margin: 16px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); cursor: zoom-in; }
-        .prose code { background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px; font-family: 'Fira Code', monospace; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.1); }
-        .prose blockquote { border-left: 4px solid #818cf8; padding-left: 1rem; font-style: italic; color: #94a3b8; margin: 1rem 0; }
-        
-        .badge-base { font-weight: 700; letter-spacing: 0.05em; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .badge-new { background: #334155; color: #e2e8f0; border: 1px solid #475569; }
-        .badge-member { background: #065f46; color: #6ee7b7; border: 1px solid #059669; }
-        .badge-regular { background: #1e40af; color: #93c5fd; border: 1px solid #2563eb; }
-        .badge-legend { background: linear-gradient(135deg, #b45309, #f59e0b); color: white; border: 1px solid #fcd34d; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-        
-        .category-chip { padding: 8px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; transition: all 0.3s; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); white-space: nowrap; backdrop-filter: blur(4px); }
-        .category-chip.active { background: #6366f1; color: white; border-color: #818cf8; box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+        .prose img { max-width: 100%; border-radius: 16px; margin: 16px 0; border: 1px solid rgba(255,255,255,0.05); }
+        .category-chip { padding: 8px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
+        .category-chip.active { background: #6366f1; color: white; border-color: #818cf8; }
         .category-chip:not(.active) { background: rgba(255,255,255,0.03); color: #94a3b8; }
-        .category-chip:not(.active):hover { background: rgba(255,255,255,0.08); color: white; }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
@@ -145,10 +78,10 @@
 
         const getRank = (count) => {
             const base = "badge-base text-[10px] px-2.5 py-1 rounded-lg uppercase";
-            if (count >= 100) return { label: "Legend", class: `${base} badge-legend` };
-            if (count >= 50) return { label: "Regular", class: `${base} badge-regular` };
-            if (count >= 10) return { label: "Member", class: `${base} badge-member` };
-            return { label: "Newcomer", class: `${base} badge-new` };
+            if (count >= 100) return { label: "Legend", class: base + " badge-legend" };
+            if (count >= 50) return { label: "Regular", class: base + " badge-regular" };
+            if (count >= 10) return { label: "Member", class: base + " badge-member" };
+            return { label: "Newcomer", class: base + " badge-new" };
         };
 
         const compressImage = (file) => {
@@ -191,9 +124,8 @@
             return (
                 <div className="min-h-screen flex items-center justify-center p-4">
                     <div className="glass-panel p-10 rounded-3xl text-center fade-in max-w-md border border-indigo-500/30 shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-                        <div className="w-20 h-20 bg-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-6 text-4xl shadow-lg"><i className="fa-solid fa-wrench text-white"></i></div>
                         <h1 className="text-3xl font-extrabold text-white mb-3">Setup Required</h1>
-                        <p className="text-slate-400 mb-8 text-lg font-medium">Please configure your Firebase keys in the HTML file to launch the app.</p>
+                        <p className="text-slate-400 mb-8 text-lg font-medium">Please configure your Firebase keys in the HTML file.</p>
                         <button onClick={() => window.location.reload()} className="btn-primary text-white px-10 py-4 rounded-xl font-bold tracking-wide text-lg w-full">Reload App</button>
                     </div>
                 </div>
@@ -214,15 +146,14 @@
                 setValue(newText);
                 setTimeout(() => { el.focus(); el.setSelectionRange(start + prefix.length, end + prefix.length); }, 0);
             };
-
             return (
                 <div className="flex gap-1 mb-3 overflow-x-auto pb-2 no-scrollbar border-b border-white/10">
-                    <button type="button" onClick={() => insert('**', '**')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Bold"><i className="fa-solid fa-bold"></i></button>
-                    <button type="button" onClick={() => insert('*', '*')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Italic"><i className="fa-solid fa-italic"></i></button>
-                    <button type="button" onClick={() => insert('`', '`')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Code"><i className="fa-solid fa-code"></i></button>
-                    <button type="button" onClick={() => insert('\n> ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Quote"><i className="fa-solid fa-quote-right"></i></button>
-                    <button type="button" onClick={() => insert('[', '](url)')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Link"><i className="fa-solid fa-link"></i></button>
-                    <button type="button" onClick={() => insert('\n- ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="List"><i className="fa-solid fa-list"></i></button>
+                    <button type="button" onClick={() => insert('**', '**')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded"><i className="fa-solid fa-bold"></i></button>
+                    <button type="button" onClick={() => insert('*', '*')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded"><i className="fa-solid fa-italic"></i></button>
+                    <button type="button" onClick={() => insert('`', '`')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded"><i className="fa-solid fa-code"></i></button>
+                    <button type="button" onClick={() => insert('\n> ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded"><i className="fa-solid fa-quote-right"></i></button>
+                    <button type="button" onClick={() => insert('[', '](url)')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded"><i className="fa-solid fa-link"></i></button>
+                    <button type="button" onClick={() => insert('\n- ', '')} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded"><i className="fa-solid fa-list"></i></button>
                 </div>
             );
         }
@@ -255,7 +186,9 @@
         function LikeButton({ user, docId, collection, likes, likedBy, authorId }) {
             const [isLiked, setIsLiked] = useState(false);
             const [count, setCount] = useState(likes || 0);
-            useEffect(() => { if (user && likedBy?.includes(user.uid)) setIsLiked(true); }, [user, likedBy]);
+            useEffect(() => { 
+                if (user && likedBy && likedBy.includes(user.uid)) setIsLiked(true); 
+            }, [user, likedBy]);
             const handleLike = async (e) => {
                 e.stopPropagation();
                 if (!user) return alert("Please sign in to vote!");
@@ -580,14 +513,6 @@
                 }
                 await batch.commit();
             };
-            
-            const deleteGuild = async (e, guildId) => { 
-                e.stopPropagation(); 
-                if(!confirm("Delete this guild permanently?")) return; 
-                await db.collection('guilds').doc(guildId).delete(); 
-            };
-            
-            const isAdmin = user && user.uid === ADMIN_UID;
 
             return (
                 <div className="max-w-5xl mx-auto p-6 fade-in space-y-8">
@@ -603,10 +528,7 @@
                             <div key={g.id} onClick={()=>{setSelectedGuild(g); onViewChange('home');}} className="glass-panel glass-hover p-6 rounded-2xl cursor-pointer bg-slate-900/40 hover:bg-slate-800/60 transition-all group border border-white/5">
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="w-14 h-14 bg-slate-800/50 rounded-xl flex items-center justify-center text-3xl shadow-inner">{g.icon || '🛡️'}</div>
-                                    <div className="flex gap-2">
-                                        <button onClick={(e)=>toggleJoin(e,g.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${myGuilds.includes(g.id) ? 'bg-slate-700/50 text-slate-400 border border-white/5' : 'btn-primary text-white shadow-md'}`}>{myGuilds.includes(g.id) ? 'Joined' : 'Join'}</button>
-                                        {isAdmin && <button onClick={(e)=>deleteGuild(e,g.id)} className="text-slate-500 hover:text-red-400 p-2 rounded-lg transition-colors bg-slate-800/50 hover:bg-red-500/10"><i className="fa-solid fa-trash"></i></button>}
-                                    </div>
+                                    <button onClick={(e)=>toggleJoin(e,g.id)} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${myGuilds.includes(g.id) ? 'bg-slate-700/50 text-slate-400 border border-white/5' : 'btn-primary text-white shadow-md'}`}>{myGuilds.includes(g.id) ? 'Joined' : 'Join'}</button>
                                 </div>
                                 <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition-colors">{g.name}</h3>
                                 <p className="text-slate-400 text-sm mt-2 line-clamp-2 leading-relaxed">{g.description}</p>
@@ -709,6 +631,7 @@
             const [replies, setReplies] = useState([]);
             const [newReply, setNewReply] = useState('');
             const bottomRef = useRef(null);
+            const contentRef = useRef(null);
             const isAdmin = user && user.uid === ADMIN_UID;
             useEffect(() => { if(!topic) return; const u = db.collection('replies').where('topicId','==',topic.id).orderBy('createdAt','asc').onSnapshot(s => setReplies(s.docs.map(d=>({id:d.id, ...d.data()})))); return ()=>u(); }, [topic]);
             const postReply = async (e) => {
@@ -768,7 +691,7 @@
                         ))}
                         <div ref={bottomRef}></div>
                     </div>
-                    {user && <div className="bg-[#0f172a]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 mt-4 shadow-2xl"><div className="flex items-center justify-between mb-2"><MarkdownToolbar textareaRef={useRef(null)} value={newReply} setValue={setNewReply} /><div className="mb-1"><ImageUpload onUpload={handleImageInsert}/></div></div><form onSubmit={postReply} className="relative"><textarea value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full glass-input rounded-2xl p-4 pr-14 text-white placeholder-slate-500 resize-none" placeholder="Write a reply..." rows="3"/><button type="submit" className="absolute right-3 bottom-3 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg transition-colors"><i className="fa-solid fa-paper-plane"></i></button></form></div>}
+                    {user && <div className="bg-[#0f172a]/80 backdrop-blur-xl p-4 rounded-3xl border border-white/10 mt-4 shadow-2xl"><div className="flex items-center justify-between mb-2"><MarkdownToolbar textareaRef={contentRef} value={newReply} setValue={setNewReply} /><div className="mb-1"><ImageUpload onUpload={handleImageInsert}/></div></div><form onSubmit={postReply} className="relative"><textarea ref={contentRef} value={newReply} onChange={e=>setNewReply(e.target.value)} className="w-full glass-input rounded-2xl p-4 pr-14 text-white placeholder-slate-500 resize-none" placeholder="Write a reply..." rows="3"/><button type="submit" className="absolute right-3 bottom-3 w-10 h-10 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg transition-colors"><i className="fa-solid fa-paper-plane"></i></button></form></div>}
                 </div>
             );
         }
